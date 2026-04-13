@@ -4,10 +4,11 @@ description: >
   Conversationally provision Alvera platform resources (data sources, tools, generic tables,
   action status updaters, AI agents) for a tenant that already exists. Use when the user
   wants to set up infrastructure on Alvera, "create a data source", "add a tool", "wire up
-  an AI agent", or similar. Drives the @alvera-ai/platform-sdk; never asks the user for a
-  YAML file — elicits fields conversationally and emits an infra.yaml receipt. Do NOT use
-  for tenant or datalake provisioning (admin-only) or for runtime ops like dataset search
-  or workflow execution.
+  an AI agent", or similar. Drives the @alvera-ai/platform-sdk via session-based auth
+  (email + password + tenant_slug → bearer token). Never asks the user for a YAML file —
+  elicits fields conversationally and emits an infra.yaml receipt. Do NOT use for tenant
+  or datalake provisioning (admin-only) or for runtime ops like dataset search or workflow
+  execution.
 ---
 
 # Alvera Platform — Guided Setup
@@ -19,8 +20,10 @@ the output. The user never writes YAML.
 ## Workflow
 
 1. **Bootstrap the session** — see `references/bootstrap.md`. Collect
-   tenant slug, API key, base URL, receipt preference. Verify
-   connectivity with `api.ping()` and pick the target datalake.
+   email, password, tenant slug, base URL, receipt preference. Exchange
+   credentials for a session token via `createSession`, build the API
+   client, verify connectivity with `api.ping()`, and pick the target
+   datalake.
 2. **Open the resource loop** — ask what the user wants to set up.
 3. **Per resource:**
    - **List first** to detect collisions.
@@ -54,6 +57,11 @@ npm install @alvera-ai/platform-sdk
 
 All SDK methods throw on non-2xx. Catch and surface errors verbatim — no
 fallbacks, no swallowing.
+
+Auth is **session-based**: `createSession({ email, password, tenantSlug })`
+returns a Bearer token; pass it into `createPlatformApi`. Tokens expire
+(default 24h). Discard the password from memory immediately after the
+session is created.
 
 ## References
 

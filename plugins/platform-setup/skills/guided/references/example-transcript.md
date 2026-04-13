@@ -6,16 +6,21 @@ A typical end-to-end conversation, from cold start to first resource.
 USER: I want to set up Acme on Alvera.
 
 AGENT: Before we start, I need:
-  1. Tenant slug — what's the slug?
-  2. API key — paste it here, I won't store it.
-  3. Base URL — default https://admin.alvera.ai, override?
-  4. Emit infra.yaml receipt? (default yes)
+  1. Email — your Alvera login email.
+  2. Password — your Alvera login password (not stored, used once to get a session token).
+  3. Tenant slug — which tenant?
+  4. Base URL — default https://admin.alvera.ai, override?
+  5. Emit infra.yaml receipt? (default yes)
 
-USER: slug=acme, key=sk_live_xxx, default URL, yes receipt.
+USER: alice@acme.com, <password>, slug=acme, default URL, yes receipt.
 
-AGENT: [calls api.ping(), then api.datalakes.list('acme')]
-       Connected. Tenant 'acme' has 1 datalake: 'acme-health'. I'll
-       operate on that. What do you want to set up?
+AGENT: [calls createSession({email, password, tenantSlug: 'acme', baseUrl})]
+       [discards password from memory]
+       [calls createPlatformApi({baseUrl, sessionToken})]
+       [calls api.ping(), then api.datalakes.list('acme')]
+       Authenticated as alice@acme.com (session expires in 24h).
+       Tenant 'acme' has 1 datalake: 'acme-health'. I'll operate on
+       that. What do you want to set up?
 
 USER: A data source for our EMR.
 

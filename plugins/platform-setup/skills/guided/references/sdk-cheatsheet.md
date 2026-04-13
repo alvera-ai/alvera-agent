@@ -1,15 +1,35 @@
 # SDK cheat sheet
 
 Package: [`@alvera-ai/platform-sdk`](https://www.npmjs.com/package/@alvera-ai/platform-sdk)
+(>= 0.2.0 — session-based auth)
 
 ```ts
-import { createPlatformApi } from '@alvera-ai/platform-sdk';
+import { createSession, createPlatformApi, revokeSession } from '@alvera-ai/platform-sdk';
 
-const api = createPlatformApi({
-  baseUrl: 'https://admin.alvera.ai',
-  apiKey: process.env.ALVERA_API_KEY!,
+const baseUrl = 'https://admin.alvera.ai';
+
+// Auth: exchange credentials for a session token
+const session = await createSession({
+  baseUrl,
+  email: '<user email>',
+  password: '<user password>',   // discard immediately after this call
+  tenantSlug: '<tenant slug>',
+  // expiresIn: 3600,            // optional, default 86400 (24h), max 2592000 (30d)
 });
+
+// Build the API client
+const api = createPlatformApi({
+  baseUrl,
+  sessionToken: session.sessionToken,
+});
+
+// Use it...
+// On done:
+await revokeSession();
 ```
+
+`session.expiresAt` is ISO-8601 — re-authenticate if expired before
+long-running work.
 
 ## Methods
 
@@ -56,5 +76,6 @@ await api.aiAgents.delete(tenantSlug, datalakeSlug, id);
   Destructure `data` for the typed payload.
 - All methods throw on non-2xx (`throwOnError: true`). Wrap in try/catch
   and surface the error message verbatim.
-- Auth is `X-API-Key`. There is no session/refresh — the key is presented
-  on every request.
+- Auth is **session-based** (Bearer token). `createSession` exchanges
+  credentials for a token; the token expires (default 24h). Use
+  `revokeSession()` to invalidate explicitly.

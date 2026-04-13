@@ -18,7 +18,31 @@ Never auto-update on collision. Never auto-rename.
 
 ## Secrets handling
 
-When a tool requires secrets (AWS keys, assume-role ARNs, API tokens):
+Three categories of secret in this skill:
+
+1. **Login credentials** (`email` + `password`) — collected at bootstrap
+   to call `createSession`.
+2. **Session token** — returned by `createSession`, used as the Bearer
+   token for the `api` client.
+3. **Resource secrets** — values inside tool bodies (AWS keys,
+   assume-role ARNs, API tokens, etc.).
+
+### Login credentials
+
+- Use only to call `createSession`.
+- Discard `email` and `password` from memory immediately after the call
+  returns. Do not retain.
+- Never echo, log, or write to disk.
+- If `createSession` returns 401, ask the user to re-enter — do not retry
+  with the same values.
+
+### Session token
+
+- Hold in process memory only, attached to the `api` client.
+- Never write to YAML, never log, never echo back.
+- On user "done" signal, call `revokeSession()` to invalidate immediately.
+
+### Resource secrets
 
 - **Preferred**: accept an env var name (`"AWS_ACCESS_KEY_ID"`) and
   resolve at runtime.
@@ -30,7 +54,6 @@ Forbidden:
 - Logging a resolved secret value.
 - Writing a resolved secret value to the YAML receipt. In the YAML, write
   `$ENV_NAME` if known, or `<set at runtime>` if literal.
-- Storing the API key beyond the `api` client instance.
 
 ## Dependency ordering
 

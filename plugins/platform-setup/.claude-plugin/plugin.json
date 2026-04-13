@@ -1,0 +1,10 @@
+{
+  "name": "platform-setup",
+  "version": "0.1.0",
+  "description": "Conversational, guardrailed setup of Alvera platform resources (data sources, tools, generic tables, action status updaters, AI agents) via @alvera-ai/platform-sdk.",
+  "author": {
+    "name": "Alvera"
+  },
+  "homepage": "https://github.com/alvera-ai/alvera-platform-infra",
+  "license": "MIT"
+}

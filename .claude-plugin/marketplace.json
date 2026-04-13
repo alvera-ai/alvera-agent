@@ -1,0 +1,14 @@
+{
+  "name": "alvera-platform-infra",
+  "owner": {
+    "name": "Alvera"
+  },
+  "description": "Alvera platform plugins for agent-driven infrastructure setup.",
+  "plugins": [
+    {
+      "name": "platform-setup",
+      "source": "./plugins/platform-setup",
+      "description": "Conversational, guardrailed setup of Alvera platform resources via @alvera-ai/platform-sdk."
+    }
+  ]
+}

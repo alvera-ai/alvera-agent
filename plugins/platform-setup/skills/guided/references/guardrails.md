@@ -73,11 +73,33 @@ Common dependencies:
 - `action-status-updaters.sender_tool_ids` → all referenced tools must exist
 - `ai-agents.tool_id` → tool must exist
 
-## Enum validation at conversation time
+## Enum validation: the API is authoritative
 
-Reject invalid enum values *before* invoking the CLI. See
-`resources.md` for the exact enums per field. Do not roundtrip to the
-API to discover the user's enum was wrong.
+Enum lists in `resources.md` are **hints for conversation flow**, not
+the source of truth. They drift from the live SDK/API over time — do
+not treat them as gospel.
+
+Rules:
+
+1. When a user supplies an enum value that matches `resources.md`, use it.
+2. When a user supplies something that *looks* plausible but isn't in the
+   local list, pass it through to the CLI rather than reject it locally.
+   The local list may be stale.
+3. On a 4xx (non-zero CLI exit with a validation error), treat the
+   stderr message as authoritative:
+   - Surface the error verbatim.
+   - If the error names the invalid field and (optionally) the allowed
+     values, re-elicit just that field, using the API-reported values as
+     the new enum list for the rest of the session.
+   - Do **not** retry the same payload automatically. Do **not** silently
+     substitute a different value.
+4. If the 4xx response lists enums that contradict `resources.md`, the
+   API wins. Note the drift to the user once ("heads up: the docs list X
+   but the API accepts Y") so they can flag it for maintenance.
+
+Structural validations that are *not* enum drift (e.g. "at least one
+column required", valid 5-field cron expression, positive integer for
+`max_tokens`) stay client-side — those don't rot.
 
 ## Read-before-write for updates
 

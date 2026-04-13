@@ -1,7 +1,14 @@
 # Resource elicitation rules
 
-Required fields are **bold**. Defaults shown after `=`. Enums are hard —
-reject anything outside them at conversation time.
+Required fields are **bold**. Defaults shown after `=`. Enum values
+listed here are **hints to guide elicitation**, not an authoritative
+whitelist — the API is the source of truth and its 4xx response is the
+validator of record (see `guardrails.md` → "Enum validation: the API is
+authoritative"). If the user supplies an enum value outside the local
+list, prefer passing it through and letting the API adjudicate over
+rejecting it locally on stale info. Structural rules (required fields,
+length ≥ 1, positive integers, valid cron, JSON shape) stay client-side
+— they don't drift.
 
 ---
 

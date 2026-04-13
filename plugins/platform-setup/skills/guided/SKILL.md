@@ -40,14 +40,16 @@ password.
 2. **Open the resource loop** — ask what the user wants to set up.
 3. **Per resource:**
    - **List first** to detect collisions (`alvera <resource> list ...`).
-   - **Elicit fields** per `references/resources.md` (one section per
-     resource type with required, optional, and enum constraints).
-   - **Validate enums at conversation time** — never roundtrip to the API
-     to discover a bad enum.
+   - **Elicit fields** per `references/resources.md`. Enum lists there are
+     **hints to guide the conversation**, not authoritative — the CLI/API
+     is the source of truth.
    - **Echo the JSON body** for explicit confirmation.
-   - **Call create** via the CLI (`references/cli-cheatsheet.md`).
+   - **Call create** via the CLI (`references/cli-cheatsheet.md`). Treat
+     any non-zero exit / 4xx as an authoritative validation failure:
+     surface the stderr verbatim, map it back to the offending field, and
+     re-elicit only that field. Do not retry the same payload.
    - **Append to `infra.yaml`** if the receipt is enabled
-     (`references/yaml-receipt.md`).
+     (`references/yaml-receipt.md`) — only after a successful (2xx) create.
 4. Loop until the user is done.
 
 ## Hard constraints

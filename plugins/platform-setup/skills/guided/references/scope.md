@@ -30,4 +30,4 @@ When asked for an out-of-scope operation, reply verbatim:
 > tenant or datalake provisioning, contact your Alvera admin."
 
 If the user pushes back, do not negotiate. Do not invent workarounds.
-Do not call the SDK for operations not listed in "In scope".
+Do not invoke the CLI for operations not listed in "In scope".

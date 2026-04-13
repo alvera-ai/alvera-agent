@@ -7,7 +7,7 @@ reject anything outside them at conversation time.
 
 ## Data source
 
-`api.dataSources.create(tenantSlug, datalakeSlug, body)`
+`alvera data-sources create <datalake> [tenant] --body '<json>'`
 
 | Field         | Required | Default  | Notes                                |
 |---------------|----------|----------|--------------------------------------|
@@ -25,7 +25,7 @@ reject anything outside them at conversation time.
 
 ## Tool
 
-`api.tools.create(tenantSlug, body)`
+`alvera tools create [tenant] --body '<json>'`
 
 | Field            | Required | Default  | Notes                                                     |
 |------------------|----------|----------|-----------------------------------------------------------|
@@ -53,7 +53,7 @@ For `auth_method: assume_role`, require `assume_role_arn` and
 
 ## Generic table
 
-`api.genericTables.create(tenantSlug, datalakeSlug, body)`
+`alvera generic-tables create <datalake> [tenant] --body-file <path>`
 
 | Field         | Required | Default | Notes                                                                 |
 |---------------|----------|---------|-----------------------------------------------------------------------|
@@ -81,7 +81,7 @@ Ask column-by-column. Reject tables with zero columns.
 
 ## Action status updater
 
-`api.actionStatusUpdaters.create(tenantSlug, body)`
+`alvera action-status-updaters create [tenant] --body-file <path>`
 
 | Field               | Required | Default | Notes                                                  |
 |---------------------|----------|---------|--------------------------------------------------------|
@@ -104,7 +104,7 @@ Ask column-by-column. Reject tables with zero columns.
 
 ## AI agent
 
-`api.aiAgents.create(tenantSlug, datalakeSlug, body)`
+`alvera ai-agents create <datalake> [tenant] --body-file <path>`
 
 | Field                | Required | Default | Notes                                                                                |
 |----------------------|----------|---------|--------------------------------------------------------------------------------------|

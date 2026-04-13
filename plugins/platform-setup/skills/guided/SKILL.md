@@ -2,12 +2,15 @@
 name: guided
 description: >
   Conversationally provision Alvera platform resources (data sources, tools, generic tables,
-  action status updaters, AI agents) for a tenant that already exists. Use when the user
-  wants to set up infrastructure on Alvera, "create a data source", "add a tool", "wire up
-  an AI agent", or similar. Drives the @alvera-ai/platform-sdk via session-based auth
-  (email + password + tenant_slug → bearer token). Never asks the user for a YAML file —
-  elicits fields conversationally and emits an infra.yaml receipt. Do NOT use for tenant
-  or datalake provisioning (admin-only) or for runtime ops like dataset search or workflow
+  action status updaters, AI agents) for a tenant that already has at least one datalake
+  provisioned. **A datalake is the first hard requirement** — without it, nothing in this
+  skill can run; the user must ask their Alvera admin to provision one first. Use when the
+  user wants to set up infrastructure on Alvera, "create a data source", "add a tool",
+  "wire up an AI agent", or similar. Drives the `alvera` CLI shipped by
+  `@alvera-ai/platform-sdk` via `npx`. Auth is session-based — the user runs `alvera login`
+  themselves once; the skill never sees the password. Never asks the user for a YAML file —
+  elicits fields conversationally and emits an infra.yaml receipt. Do NOT use for tenant or
+  datalake provisioning (admin-only) or for runtime ops like dataset search or workflow
   execution.
 ---
 
@@ -15,24 +18,34 @@ description: >
 
 Conversationally provision Alvera platform resources for an existing
 tenant + datalake. Conversation is the input; an `infra.yaml` receipt is
-the output. The user never writes YAML.
+the output. The user never writes YAML — and never hands the skill their
+password.
+
+## Prerequisites (in order)
+
+1. **A provisioned datalake on the target tenant.** This is the first
+   and non-negotiable requirement — every resource this skill creates is
+   scoped to a datalake. If the tenant has none, the skill cannot
+   proceed; tell the user to ask their Alvera admin to provision one,
+   then come back. Datalake creation is admin-only and out of scope.
+2. The `alvera` CLI available (via `npx` or global install).
+3. A valid session for the target tenant (the user runs `alvera login`
+   themselves — see `references/bootstrap.md`).
 
 ## Workflow
 
-1. **Bootstrap the session** — see `references/bootstrap.md`. Collect
-   email, password, tenant slug, base URL, receipt preference. Exchange
-   credentials for a session token via `createSession`, build the API
-   client, verify connectivity with `api.ping()`, and pick the target
-   datalake.
+1. **Bootstrap the session** — see `references/bootstrap.md`. Confirm the
+   user has run `alvera login` themselves; verify with `alvera whoami` +
+   `alvera ping`; pick the target datalake via `alvera datalakes list`.
 2. **Open the resource loop** — ask what the user wants to set up.
 3. **Per resource:**
-   - **List first** to detect collisions.
+   - **List first** to detect collisions (`alvera <resource> list ...`).
    - **Elicit fields** per `references/resources.md` (one section per
      resource type with required, optional, and enum constraints).
    - **Validate enums at conversation time** — never roundtrip to the API
      to discover a bad enum.
-   - **Echo the payload** for explicit confirmation.
-   - **Call create** via the SDK (`references/sdk-cheatsheet.md`).
+   - **Echo the JSON body** for explicit confirmation.
+   - **Call create** via the CLI (`references/cli-cheatsheet.md`).
    - **Append to `infra.yaml`** if the receipt is enabled
      (`references/yaml-receipt.md`).
 4. Loop until the user is done.
@@ -46,22 +59,36 @@ Read these before any user interaction:
   destructive confirmations, secrets handling, dependency ordering,
   read-before-write for updates.
 
-## SDK
+## CLI
 
-This skill drives [`@alvera-ai/platform-sdk`](https://www.npmjs.com/package/@alvera-ai/platform-sdk).
-Install it in the user's project if missing:
+This skill drives the `alvera` CLI shipped by
+[`@alvera-ai/platform-sdk`](https://www.npmjs.com/package/@alvera-ai/platform-sdk)
+(>= 0.2.0). Two equivalent invocation forms — pick one and stay
+consistent in the conversation:
 
 ```bash
-npm install @alvera-ai/platform-sdk
+# Zero-install (preferred — no project pollution)
+npx -p @alvera-ai/platform-sdk alvera <command>
+
+# Or install globally once
+npm install -g @alvera-ai/platform-sdk
+alvera <command>
 ```
 
-All SDK methods throw on non-2xx. Catch and surface errors verbatim — no
-fallbacks, no swallowing.
+All examples in the references use the bare `alvera <command>` form for
+readability. Substitute the `npx -p ...` prefix at run time.
 
-Auth is **session-based**: `createSession({ email, password, tenantSlug })`
-returns a Bearer token; pass it into `createPlatformApi`. Tokens expire
-(default 24h). Discard the password from memory immediately after the
-session is created.
+The CLI exits non-zero on any API error. Surface stderr verbatim — no
+fallbacks, no swallowing. Output is pretty JSON on stdout; status
+messages and prompts go to stderr, so responses stay pipeable.
+
+Auth is **session-based** and stored AWS-CLI-style under `~/.alvera-ai/`:
+
+- `~/.alvera-ai/config` — base URL, default tenant, email per profile
+- `~/.alvera-ai/credentials` — session token + `expires_at` (mode 0600)
+
+The user runs `alvera login` once in their own shell. The skill never
+collects the password and never invokes `login` itself.
 
 ## References
 
@@ -70,5 +97,5 @@ session is created.
 - `references/guardrails.md` — non-negotiable rules
 - `references/resources.md` — per-resource field elicitation rules
 - `references/yaml-receipt.md` — emitted YAML schema and rules
-- `references/sdk-cheatsheet.md` — SDK call signatures
+- `references/cli-cheatsheet.md` — CLI command surface
 - `references/example-transcript.md` — reference end-to-end conversation

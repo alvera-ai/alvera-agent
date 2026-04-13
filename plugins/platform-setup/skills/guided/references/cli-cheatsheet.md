@@ -48,7 +48,8 @@ tenant. All `create` / `update` commands take exactly one of
 `--body '<json>'` or `--body-file <path>` (use `-` for stdin).
 
 ```bash
-# Datalakes (read-only)
+# Datalakes (read-only in this skill — `create` exists in the CLI but
+# is admin-only and never invoked here; see scope.md)
 alvera datalakes list  [tenant]
 alvera datalakes get   <id> [tenant]
 
@@ -79,6 +80,15 @@ alvera ai-agents get    <datalake> <id> [tenant]
 alvera ai-agents create <datalake> [tenant]         --body '<json>' | --body-file <path>
 alvera ai-agents update <datalake> <id> [tenant]    --body '<json>' | --body-file <path>
 alvera ai-agents delete <datalake> <id> [tenant]
+
+# Connected apps (datalake-scoped resource CRUD + sync-routes action).
+# The `resolve-page` and `update-message-tracking` subcommands are page
+# rendering / runtime — out of scope, do not invoke.
+alvera connected-apps list        <datalake> [tenant]
+alvera connected-apps get         <datalake> <id> [tenant]
+alvera connected-apps create      <datalake> [tenant]      --body '<json>' | --body-file <path>
+alvera connected-apps update      <datalake> <id> [tenant] --body '<json>' | --body-file <path>
+alvera connected-apps sync-routes <datalake> <id> [tenant]
 ```
 
 ## Output and errors

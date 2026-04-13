@@ -32,6 +32,26 @@ tools:
 generic_tables: []
 action_status_updaters: []
 ai_agents: []
+connected_apps: []
+```
+
+### Connected app shape (when present)
+
+```yaml
+connected_apps:
+  - name: Acme Portal
+    mode: managed                          # or self_hosted
+    description: Patient-facing portal
+    repo_url: https://github.com/acme/portal
+    urls:
+      - url: https://portal.acme.com
+        is_primary: true
+        label: Production
+    cloudflare_pages_config:
+      account_id: $CF_ACCOUNT_ID           # placeholder, never resolved
+      api_token: $CF_API_TOKEN             # placeholder, never resolved
+      github_auth_method: github_app
+      production_branch: main
 ```
 
 ## Rules

@@ -127,3 +127,54 @@ Ask column-by-column. Reject tables with zero columns.
 | `input_schema`       | no       | —       | JSON Schema                                                                          |
 | `llm_response_schema`| no       | —       | JSON Schema                                                                          |
 | `prompt_config`      | no       | —       | Free-form object                                                                     |
+
+---
+
+## Connected app
+
+`alvera connected-apps create <datalake> [tenant] --body-file <path>`
+
+External web application connected to the platform via M2M API key.
+Datalake-scoped. Two deployment modes with different required fields —
+elicit `mode` first, then branch.
+
+| Field                      | Required | Default | Notes                                                              |
+|----------------------------|----------|---------|--------------------------------------------------------------------|
+| `name`                     | **yes**  | —       | Unique within the datalake                                         |
+| `mode`                     | **yes**  | —       | Enum: `managed \| self_hosted`                                     |
+| `description`              | no       | —       | —                                                                  |
+| `repo_url`                 | cond.    | —       | **Required when** `mode = managed`. Optional for `self_hosted`.    |
+| `urls`                     | cond.    | `[]`    | **At least one required when** `mode = self_hosted`. See shape below. |
+| `cloudflare_pages_config`  | cond.    | —       | **Required when** `mode = managed`. See shape below.               |
+
+### `urls[]` shape
+
+| Field        | Required | Default | Notes                                  |
+|--------------|----------|---------|----------------------------------------|
+| `url`        | **yes**  | —       | Must be `http://` or `https://`        |
+| `is_primary` | no       | `false` | Exactly one entry should be primary    |
+| `label`      | no       | —       | Human-readable                         |
+
+If the user supplies multiple URLs and none is marked primary, ask
+which one. Do not auto-pick.
+
+### `cloudflare_pages_config` shape (managed mode)
+
+| Field                  | Required | Default      | Notes                                                       |
+|------------------------|----------|--------------|-------------------------------------------------------------|
+| `account_id`           | **yes**  | —            | Cloudflare account ID                                       |
+| `api_token`            | **yes**  | —            | **Secret** (writeOnly). Env-var name preferred — see `guardrails.md`. |
+| `github_auth_method`   | **yes**  | —            | Enum: `github_app \| pat`                                   |
+| `github_pat`           | cond.    | —            | **Required when** `github_auth_method = pat`. **Secret.**   |
+| `production_branch`    | no       | `main`       | Git branch for production builds                            |
+| `build_command`        | no       | —            | Build command                                               |
+| `destination_dir`      | no       | —            | Build output directory                                      |
+
+`project_name` is server-assigned (readOnly) — never elicit.
+
+### `sync-routes`
+
+`alvera connected-apps sync-routes <datalake> <id>` triggers a route sync
+against the connected app. No body. Treat it like a destructive-ish
+action: confirm before invoking, since it mutates routing state on the
+remote app.

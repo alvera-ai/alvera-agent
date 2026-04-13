@@ -2,7 +2,7 @@
 name: guided
 description: >
   Conversationally provision Alvera platform resources (data sources, tools, generic tables,
-  action status updaters, AI agents) for a tenant that already has at least one datalake
+  action status updaters, AI agents, connected apps) for a tenant that already has at least one datalake
   provisioned. **A datalake is the first hard requirement** — without it, nothing in this
   skill can run; the user must ask their Alvera admin to provision one first. Use when the
   user wants to set up infrastructure on Alvera, "create a data source", "add a tool",

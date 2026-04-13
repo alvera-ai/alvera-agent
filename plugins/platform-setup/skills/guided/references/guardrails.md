@@ -16,6 +16,11 @@ Never auto-update on collision. Never auto-rename.
 type `yes delete <name>` *exactly*. Partial confirmations ("yes",
 "go ahead", "sure") are insufficient — re-prompt.
 
+`alvera connected-apps sync-routes <datalake> <id>` mutates routing
+state on the remote app. It's not a deletion, but it has user-visible
+effects, so confirm with a plain "y/n" before invoking. Show the app
+name + id in the prompt.
+
 ## Secrets handling
 
 Two categories of secret in this skill:
@@ -72,6 +77,11 @@ Common dependencies:
 - `action-status-updaters.updater_tool_id` → tool must exist
 - `action-status-updaters.sender_tool_ids` → all referenced tools must exist
 - `ai-agents.tool_id` → tool must exist
+- `connected-apps` with `mode = managed` → `repo_url` + full
+  `cloudflare_pages_config` (account, token, GitHub auth) must be
+  supplied; refuse to create with a half-filled CF config
+- `connected-apps` with `mode = self_hosted` → at least one entry in
+  `urls[]` must be supplied; refuse to create without it
 
 ## Enum validation: the API is authoritative
 

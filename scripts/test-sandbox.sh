@@ -41,16 +41,53 @@ while [[ $# -gt 0 ]]; do
 done
 
 command -v claude >/dev/null || { echo "error: 'claude' not on PATH" >&2; exit 1; }
+REAL_CLAUDE="$(command -v claude)"
+REAL_HOME="$HOME"
 
-TMP_BASE="${TMPDIR:-/tmp}"
-TMP_BASE="${TMP_BASE%/}"   # strip trailing slash (macOS $TMPDIR has one)
-SANDBOX="$(mktemp -d "$TMP_BASE/alvera-sandbox.XXXXXX")"
+# Use /tmp directly (not $TMPDIR) — shorter path, fewer TUI line-wrap issues
+# with /plugin's add-marketplace dialog on macOS.
+SANDBOX="$(mktemp -d /tmp/alvera.XXXXXX)"
 FAKE_HOME="$SANDBOX/home"
 CONFIG_DIR="$SANDBOX/home/.claude"
 PROJECT="$SANDBOX/project"
-MARKET="$SANDBOX/marketplace"
+MARKET="$SANDBOX/market"
 
-mkdir -p "$FAKE_HOME" "$CONFIG_DIR" "$PROJECT" "$MARKET"
+mkdir -p "$FAKE_HOME/.local/bin" "$CONFIG_DIR" "$PROJECT" "$MARKET"
+
+# Claude Code's "native" install records installMethod: native and checks
+# for its own binary at $HOME/.local/bin/claude at startup. With HOME
+# redirected, that path resolves inside the sandbox — so mirror the real
+# binary there via a symlink.
+ln -sf "$REAL_CLAUDE" "$FAKE_HOME/.local/bin/claude"
+
+# Toolchain passthrough: symlink any Node / Rust version-manager state
+# from the real HOME into the fake HOME so `npx`, `npm`, `pnpm`, `node`
+# etc. keep working inside the sandbox. Shims are absolute paths in the
+# inherited PATH; their internals look up config relative to $HOME, so
+# without these links the shims exit with "no version set" or similar.
+toolchain_paths=(
+  ".asdf"           # asdf: plugins, installs, shims, global .tool-versions
+  ".tool-versions"  # project-agnostic fallback
+  ".config/mise"    # mise config (alternate asdf)
+  ".local/share/mise"
+  ".nvm"            # nvm install root (if user uses nvm)
+  ".npm"            # npm cache + global prefix default
+  ".npmrc"          # npm config
+  ".pnpm"
+  ".pnpm-store"
+)
+for p in "${toolchain_paths[@]}"; do
+  [[ -e "$REAL_HOME/$p" ]] || continue
+  mkdir -p "$(dirname "$FAKE_HOME/$p")"
+  ln -sf "$REAL_HOME/$p" "$FAKE_HOME/$p"
+done
+
+# Silence noisy dotfile sources from user shell rc files. These don't
+# affect the skill — they just make `pwd` etc. print a spurious error
+# when the user's ~/.zshenv sources a file that doesn't exist in the
+# fake HOME. Touch empty stubs rather than symlinking the real dirs.
+mkdir -p "$FAKE_HOME/.cargo"
+: > "$FAKE_HOME/.cargo/env"
 
 # Snapshot this repo (excluding VCS, node_modules, and .claude local state).
 if command -v rsync >/dev/null; then
@@ -97,23 +134,29 @@ Exit Claude to clean up the sandbox ($([[ $KEEP -eq 1 ]] && echo 'kept' || echo 
 ────────────────────────────────────────────────────────────────────────
 INFO
 
-# Minimal env — drop anything that could leak host config.
-# Keep PATH so `claude`, `npx`, `node`, etc. resolve.
+# Env strategy: inherit the parent shell environment (so asdf / rtx / nvm
+# / mise shims keep working and `npx` resolves), but override HOME and
+# CLAUDE_CONFIG_DIR, and wipe ALVERA_* so a stray token in the parent
+# shell can't bypass `alvera login` inside the sandbox.
 cd "$PROJECT"
+unset ALVERA_PROFILE ALVERA_BASE_URL ALVERA_TENANT ALVERA_EMAIL \
+      ALVERA_PASSWORD ALVERA_SESSION_TOKEN
+export HOME="$FAKE_HOME"
+export CLAUDE_CONFIG_DIR="$CONFIG_DIR"
+
+# Some toolchains honor explicit root env vars over $HOME lookups — set
+# them when their real paths are present so shims resolve even if the
+# symlink step above is disabled or fails silently.
+# ASDF_DIR = where asdf's own code lives (homebrew: /opt/homebrew/opt/asdf/libexec).
+# ASDF_DATA_DIR = where plugins, installs, shims live (~/.asdf).
+# Inherit ASDF_DIR from parent env — overriding it breaks homebrew asdf.
+# Only pin ASDF_DATA_DIR to the real home so plugin/install lookups work.
+[[ -d "$REAL_HOME/.asdf" ]] && export ASDF_DATA_DIR="$REAL_HOME/.asdf"
+[[ -d "$REAL_HOME/.nvm"  ]] && export NVM_DIR="$REAL_HOME/.nvm"
+
 if [[ "$MODE" == "shell" ]]; then
-  exec env -i \
-    HOME="$FAKE_HOME" \
-    CLAUDE_CONFIG_DIR="$CONFIG_DIR" \
-    PATH="$PATH" \
-    TERM="${TERM:-xterm-256color}" \
-    SHELL="${SHELL:-/bin/bash}" \
-    PS1='(sandbox) \w $ ' \
-    "${SHELL:-/bin/bash}"
+  export PS1='(sandbox) \w $ '
+  exec "${SHELL:-/bin/bash}"
 else
-  exec env -i \
-    HOME="$FAKE_HOME" \
-    CLAUDE_CONFIG_DIR="$CONFIG_DIR" \
-    PATH="$PATH" \
-    TERM="${TERM:-xterm-256color}" \
-    claude
+  exec "$REAL_CLAUDE"
 fi

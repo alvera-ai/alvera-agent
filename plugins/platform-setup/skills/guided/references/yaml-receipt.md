@@ -13,6 +13,26 @@ tenant:
 datalake:
   slug: <datalake_slug_chosen_at_bootstrap>
 
+datalakes:                             # only populated if the skill created one
+  - name: Prime Production
+    slug: prime-prod
+    data_domain: healthcare
+    timezone: America/New_York
+    pool_size: 10
+    # DB config per role: host / port / name / schema / auth_method /
+    # enable_ssl recorded verbatim; credentials always as placeholders.
+    unregulated_db_writer:
+      host: db.internal
+      port: 5432
+      name: alvera_unreg
+      schema: public
+      auth_method: password
+      enable_ssl: true
+      user: $ALVERA_UNREG_W_USER        # placeholder, never resolved
+      pass: $ALVERA_UNREG_W_PASS        # placeholder, never resolved
+    # ...repeat for unregulated_db_reader, regulated_data_db_writer,
+    # regulated_data_db_reader...
+
 data_sources:
   - name: Acme EMR
     uri: our-emr:acme
@@ -61,8 +81,8 @@ connected_apps:
 - **Reference by name, not id.** Ids are runtime; names are stable across
   environments.
 - **Secrets are placeholders.** `$AWS_ACCESS_KEY_ID`, `$ALVERA_API_KEY`,
-  etc. — never the resolved value. If the user supplied a literal at
-  conversation time, write `<set at runtime>`.
+  DB `user`/`pass` fields, etc. — never the resolved value. If the user
+  supplied a literal at conversation time, write `<set at runtime>`.
 - The YAML is a **receipt**, not a config file. The API is the source of
   truth. When the user asks "what do I have?", call `list` endpoints —
   do not read the YAML.

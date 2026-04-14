@@ -1,17 +1,18 @@
 ---
 name: guided
 description: >
-  Conversationally provision Alvera platform resources (data sources, tools, generic tables,
-  action status updaters, AI agents, connected apps) for a tenant that already has at least one datalake
-  provisioned. **A datalake is the first hard requirement** — without it, nothing in this
-  skill can run; the user must ask their Alvera admin to provision one first. Use when the
-  user wants to set up infrastructure on Alvera, "create a data source", "add a tool",
+  Conversationally provision Alvera platform resources (datalakes, data sources, tools,
+  generic tables, action status updaters, AI agents, connected apps) on an existing
+  tenant. A datalake is required for most resources — if the tenant has none, the skill
+  will offer to create one first (DB credentials elicited conversationally; secrets
+  handled via env vars or a `.env` file, never inlined). Use when the user wants to set
+  up infrastructure on Alvera, "create a datalake", "create a data source", "add a tool",
   "wire up an AI agent", or similar. Drives the `alvera` CLI shipped by
   `@alvera-ai/platform-sdk` via `npx`. Auth is session-based — the user runs `alvera login`
   themselves once; the skill never sees the password. Never asks the user for a YAML file —
-  elicits fields conversationally and emits an infra.yaml receipt. Do NOT use for tenant or
-  datalake provisioning (admin-only) or for runtime ops like dataset search or workflow
-  execution.
+  elicits fields conversationally and emits an infra.yaml receipt. Do NOT use for tenant
+  provisioning (admin-only) or for runtime ops like dataset search, workflow execution,
+  or data activation ingest.
 ---
 
 # Alvera Platform — Guided Setup
@@ -31,13 +32,15 @@ password.
    both fail, hand the user the install command and stop; do not try to
    install the CLI (or Node) yourself. Full procedure in
    `references/bootstrap.md` → "Step 0".
-2. **A provisioned datalake on the target tenant.** Non-negotiable —
-   every resource this skill creates is scoped to a datalake. If the
-   tenant has none, the skill cannot proceed; tell the user to ask their
-   Alvera admin to provision one, then come back. Datalake creation is
-   admin-only and out of scope.
-3. A valid session for the target tenant (the user runs `alvera login`
+2. A valid session for the target tenant (the user runs `alvera login`
    themselves — see `references/bootstrap.md`).
+3. **A datalake** — either an existing one, or one the skill creates at
+   the start of the session. Most resources are datalake-scoped, so if
+   the tenant has none, the first thing the skill does is offer to
+   create one. Datalake creation requires DB credentials; treat them as
+   secrets (env var names or a `.env` file, never inlined in shell
+   args) — see `references/resources.md` → "Datalake" and
+   `references/guardrails.md` → "Secrets handling".
 
 ## Workflow
 

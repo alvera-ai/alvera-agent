@@ -4,7 +4,7 @@
 
 | Resource                | Operations                                  |
 |-------------------------|---------------------------------------------|
-| `datalakes`             | list, get (read-only — for discovery)       |
+| `datalakes`             | list, get, create                           |
 | `dataSources`           | list, create, update                        |
 | `tools`                 | list, get, create, update, delete           |
 | `genericTables`         | list, create                                |
@@ -13,12 +13,16 @@
 | `connectedApps`         | list, get, create, update, syncRoutes       |
 | `ping`                  | health check                                |
 
+Datalake creation is in scope but is sensitive — it takes DB
+credentials (four roles × password/host/port/schema/SSL/auth). See
+`resources.md` → "Datalake" for elicitation rules and
+`guardrails.md` → "Secrets handling" for how creds are sourced.
+
 ## Out of scope (refuse)
 
 - Tenant create / delete (admin-only)
-- Datalake create / delete (admin-only) — note: the CLI now exposes
-  `alvera datalakes create`, but this skill never invokes it. Capability
-  in the CLI ≠ authorization in the skill.
+- Datalake **delete** / **update** — the API doesn't expose them.
+  If the user asks, say so and offer to create a new datalake instead.
 - Dataset search, workflow execute, data activation ingest (runtime ops)
 - MDM verify
 - Connected app **page management** — `connected-apps resolve-page` and

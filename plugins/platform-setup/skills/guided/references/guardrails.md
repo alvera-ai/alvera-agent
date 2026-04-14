@@ -60,6 +60,28 @@ the CLI — not in this conversation, not in any process arg list.
   delete the tempfile. Never inline a secret into `--body '<json>'` —
   shell history would capture it.
 
+### Datalake DB credentials (extra sensitive)
+
+Datalake creation takes up to **eight** passwords + usernames (four DB
+roles × 2). Same rules as resource secrets, enforced hard:
+
+- Three acceptable sourcing patterns — **in order of preference**:
+  env vars in the user's shell, a `.env` file the user fills in, or
+  one-shot literals typed into the chat. See `resources.md` →
+  "Datalake" → "Pass 3 — credentials" for the full flow.
+- **Never** pass `--body '<json>'` with embedded passwords; always
+  `--body-file /tmp/...`.
+- **Tempfile hygiene**: `chmod 600` the file before write, delete it
+  **immediately** after `alvera datalakes create` returns (success or
+  failure). Use a `trap` or explicit `rm` in both branches — never rely
+  on TMPDIR cleanup.
+- When generating a `.env.example` for the user, list only the env
+  var *names*. No placeholder values like `changeme` — users copy
+  those into prod and regret it.
+- If the user pastes a password into chat, do **not** repeat it back
+  ("just to confirm your password is...") — acknowledge in the abstract
+  ("got the regulated-writer password"), write the tempfile, run, `rm`.
+
 Forbidden:
 - Echoing a resolved secret value back to the user.
 - Logging a resolved secret value.

@@ -48,10 +48,13 @@ tenant. All `create` / `update` commands take exactly one of
 `--body '<json>'` or `--body-file <path>` (use `-` for stdin).
 
 ```bash
-# Datalakes (read-only in this skill — `create` exists in the CLI but
-# is admin-only and never invoked here; see scope.md)
-alvera datalakes list  [tenant]
-alvera datalakes get   <id> [tenant]
+# Datalakes
+alvera datalakes list   [tenant]
+alvera datalakes get    <id> [tenant]
+alvera datalakes create [tenant]                    --body-file <path>
+# Prefer --body-file over --body '<json>' for datalake create — the payload
+# contains DB passwords. See resources.md → "Datalake" for the three
+# credential-sourcing patterns (env vars, .env, one-shot literal).
 
 # Data sources
 alvera data-sources list   <datalake> [tenant]

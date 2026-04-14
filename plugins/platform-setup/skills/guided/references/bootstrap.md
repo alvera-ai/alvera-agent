@@ -35,14 +35,19 @@ If `npm` / `pnpm` itself is missing, that's a Node install problem one
 level lower — point the user at nvm / rtx / asdf / homebrew / nodejs.org
 in a single sentence and stop there. Don't try to diagnose shims.
 
-## Hard prerequisite: a provisioned datalake
+## Datalake presence
 
-**Before anything else**, the target tenant must have at least one
-datalake. Every resource this skill creates is scoped to a datalake; with
-zero datalakes there is nothing to operate on. Datalake provisioning is
-admin-only and out of scope here. If the user isn't sure, the
-`datalakes list` step below will tell us — and if it returns empty, stop
-and refuse with the verbatim message in that section.
+Most resources (data sources, tools, generic tables, AI agents,
+connected apps) are datalake-scoped, so we need one before we can
+provision anything else. The `datalakes list` step below finds out
+whether the tenant has one.
+
+- **Tenant has at least one datalake** → pick one and continue.
+- **Zero datalakes** → offer to create one now. Datalake creation takes
+  DB credentials (four role pairs × host/port/auth/ssl/schema); handle
+  them with care. Full elicitation + secret-handling procedure in
+  `references/resources.md` → "Datalake". Do **not** refuse outright;
+  that used to be the policy, it isn't anymore.
 
 ## Auth, briefly
 
@@ -105,9 +110,9 @@ alvera --profile <name> datalakes list <tenantSlug>
 
 (`<tenantSlug>` is optional if the profile has one configured.)
 
-- **Zero datalakes** → refuse:
-  > "This tenant has no datalakes provisioned. A datalake must exist
-  > before resources can be added — ask your Alvera admin to provision one."
+- **Zero datalakes** → offer to create one. Walk the user through the
+  "Datalake" section of `resources.md`. Once created, pin its slug for
+  the session and continue.
 - **One** → use it automatically, tell the user the slug.
 - **More than one** → ask which to operate on. Remember for the session.
 

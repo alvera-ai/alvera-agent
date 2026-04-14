@@ -51,7 +51,12 @@ password.
 2. **Bootstrap the session** — `references/bootstrap.md`. Confirm the
    user has run `alvera login` themselves; verify with `alvera whoami` +
    `alvera ping`; pick the target datalake via `alvera datalakes list`.
-3. **Open the resource loop** — ask what the user wants to set up.
+3. **Open the resource loop** — ask what the user wants to set up,
+   **and always list the options inline**. Example: "What's next? You
+   can set up a data source, tool, generic table, action status
+   updater, AI agent, or connected app." Repeat the option list every
+   time you return to the loop (after each successful create or skip)
+   — don't assume the user remembers.
 4. **Per resource:**
    - **List first** to detect collisions (`alvera <resource> list ...`).
    - **Elicit fields** per `references/resources.md`. Enum lists there are

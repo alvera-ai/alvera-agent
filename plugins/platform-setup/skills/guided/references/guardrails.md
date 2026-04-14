@@ -65,19 +65,30 @@ the CLI — not in this conversation, not in any process arg list.
 Datalake creation takes up to **eight** passwords + usernames (four DB
 roles × 2). Same rules as resource secrets, enforced hard:
 
-- Three acceptable sourcing patterns — **in order of preference**:
-  env vars in the user's shell, a `.env` file the user fills in, or
-  one-shot literals typed into the chat. See `resources.md` →
-  "Datalake" → "Pass 3 — credentials" for the full flow.
+- Three acceptable sourcing patterns — **actively ask, don't passively
+  list**. See `resources.md` → "Datalake" → "Pass 3 — credentials" for
+  the exact prompt wording and full flow. In short:
+  - (a) Env vars the user has already set (give names, not values).
+  - (b) **Proactively scaffold `./.alvera.datalake.env`** for the
+    user — skill writes the variable names, user fills values, skill
+    sources and uses. Recommended default for first-time setup.
+  - (c) One-shot literals typed into chat (least preferred).
+- When scaffolding `.alvera.datalake.env`:
+  - **Filename is literal**: `.alvera.datalake.env` (not generic
+    `.env` — avoids clashing with project-level dotenv files).
+  - Values in the scaffold must be **empty quotes** (`VAR=""`), never
+    placeholder strings like `changeme` — those get copy-pasted into
+    prod.
+  - Append the filename to `./.gitignore` (create it if missing)
+    before telling the user it's safe to fill in.
+  - On source, verify every variable is non-empty; if any are blank,
+    stop and name the blank ones back to the user — don't guess.
 - **Never** pass `--body '<json>'` with embedded passwords; always
   `--body-file /tmp/...`.
 - **Tempfile hygiene**: `chmod 600` the file before write, delete it
   **immediately** after `alvera datalakes create` returns (success or
   failure). Use a `trap` or explicit `rm` in both branches — never rely
   on TMPDIR cleanup.
-- When generating a `.env.example` for the user, list only the env
-  var *names*. No placeholder values like `changeme` — users copy
-  those into prod and regret it.
 - If the user pastes a password into chat, do **not** repeat it back
   ("just to confirm your password is...") — acknowledge in the abstract
   ("got the regulated-writer password"), write the tempfile, run, `rm`.

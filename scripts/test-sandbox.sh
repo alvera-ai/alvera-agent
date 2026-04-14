@@ -94,18 +94,16 @@ mkdir -p "$FAKE_HOME/.cargo"
 # CLAUDE_CONFIG_DIR, same cwd). Values are baked in at sandbox-creation
 # time so no lookups against the real HOME are needed.
 cat > "$SANDBOX/activate.sh" <<EOF
-# Source this file (do not execute) in another terminal to enter the
-# Alvera sandbox at $SANDBOX. Example:
+# Source this file in another terminal to enter the Alvera sandbox
+# at $SANDBOX. Example:
 #   source $SANDBOX/activate.sh
 #
-# When you're done, \`exit\` or open a fresh shell — the activation is
-# scoped to whatever shell sourced this file.
-
-if [[ "\${BASH_SOURCE[0]:-\$0}" == "\$0" ]]; then
-  echo "activate.sh must be sourced, not executed:" >&2
-  echo "  source \$0" >&2
-  exit 1
-fi
+# (Works in both bash and zsh. If you execute it directly the env
+# changes apply to the subshell and vanish when it exits — harmless,
+# but not what you want.)
+#
+# When you're done, \`exit\` or open a fresh shell — the activation
+# is scoped to whatever shell sourced this file.
 
 unset ALVERA_PROFILE ALVERA_BASE_URL ALVERA_TENANT ALVERA_EMAIL \\
       ALVERA_PASSWORD ALVERA_SESSION_TOKEN
@@ -125,7 +123,15 @@ fi
 
 cat >> "$SANDBOX/activate.sh" <<EOF
 cd '$PROJECT'
-export PS1='(sandbox) \\w \$ '
+
+# Prompt — zsh uses %~ for "cwd relative to \$HOME", bash uses \\w.
+if [ -n "\${ZSH_VERSION:-}" ]; then
+  export PS1='(sandbox) %~ \$ '
+  export PROMPT='(sandbox) %~ \$ '
+else
+  export PS1='(sandbox) \\w \$ '
+fi
+
 echo "Entered Alvera sandbox:"
 echo "  HOME=\$HOME"
 echo "  cwd=\$(pwd)"

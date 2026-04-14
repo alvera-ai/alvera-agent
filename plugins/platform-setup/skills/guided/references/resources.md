@@ -70,45 +70,83 @@ Roles: `unregulated_db_writer`, `unregulated_db_reader`,
 ### Pass 3 — credentials (sensitive)
 
 For each role using `auth_method: password`, we need a `<role>_user` and
-`<role>_pass`. `iam_role` roles skip these fields. Offer the user three
-ways to supply creds, in order of preference:
+`<role>_pass`. `iam_role` roles skip these fields.
 
-1. **Existing env vars** (best) — user sets shell env vars like
-   `PROD_REGULATED_WRITER_USER` and `PROD_REGULATED_WRITER_PASS` in
-   their terminal, then gives the skill the *names*. The skill
-   expands them via `envsubst` into a tempfile body:
+**Don't just list options passively.** Ask the user directly:
 
+> "Credentials next — how do you want to supply the DB passwords?
+> I can:
+>   a) Use env vars you've already set (give me the names).
+>   b) **Scaffold an `.alvera.datalake.env` for you** — I write the
+>      variable names you need (values left blank), you fill them in,
+>      tell me when you're done, and I'll source it.
+>   c) Accept one-shot literal values typed here (least preferred —
+>      they hit your chat history).
+> Which?"
+
+Default recommendation: (b) for first-time setup, (a) for users who
+already manage secrets in their shell/1Password/vault.
+
+#### (a) Existing env vars
+
+User sets shell env vars before running the skill; gives the skill the
+*names*, not values. The skill expands them via `envsubst` into a
+tempfile body:
+
+```bash
+# user does (in their own shell, outside Claude):
+export REG_W_USER=... REG_W_PASS=... REG_R_USER=... REG_R_PASS=... \
+       UNR_W_USER=... UNR_W_PASS=... UNR_R_USER=... UNR_R_PASS=...
+
+# skill writes body template to tempfile, then:
+envsubst < /tmp/datalake.json.tpl > /tmp/datalake.json
+alvera datalakes create --body-file /tmp/datalake.json
+rm /tmp/datalake.json   # immediately after create returns
+```
+
+#### (b) Scaffold `.alvera.datalake.env` (proactive)
+
+Offer to write the file for the user. Workflow:
+
+1. Skill writes `./.alvera.datalake.env` with the variable *names* they
+   need, values left as empty quotes:
    ```bash
-   # user does (in their own shell, outside Claude):
-   export REG_W_USER=... REG_W_PASS=... REG_R_USER=... REG_R_PASS=... \
-          UNR_W_USER=... UNR_W_PASS=... UNR_R_USER=... UNR_R_PASS=...
-
-   # skill writes body template to tempfile, then:
-   envsubst < /tmp/datalake.json.tpl > /tmp/datalake.json
-   alvera datalakes create --body-file /tmp/datalake.json
-   rm /tmp/datalake.json   # immediately after create returns
+   # .alvera.datalake.env — fill in values, do not commit
+   REG_W_USER=""
+   REG_W_PASS=""
+   REG_R_USER=""
+   REG_R_PASS=""
+   UNR_W_USER=""
+   UNR_W_PASS=""
+   UNR_R_USER=""
+   UNR_R_PASS=""
    ```
-
-2. **`.env` file in the project** (also good) — skill writes a
-   `.env.example` listing the required var names (no values) and tells
-   the user to copy it to `.env`, fill in the passwords, then run:
-
+2. Skill appends `.alvera.datalake.env` to `./.gitignore` (creating it
+   if needed). Never commit the filled file.
+3. Skill tells the user: *"Fill in the eight values in
+   `.alvera.datalake.env`, save it, and tell me when you're done."*
+4. On the user's confirmation, skill runs:
    ```bash
-   set -a; source .env; set +a
+   set -a; source ./.alvera.datalake.env; set +a
+   # verify all vars non-empty; if any are blank, stop and tell the user which
    envsubst < /tmp/datalake.json.tpl > /tmp/datalake.json
    alvera datalakes create --body-file /tmp/datalake.json
    rm /tmp/datalake.json
    ```
+5. After success, remind the user they can delete
+   `.alvera.datalake.env` now (creds are already applied on the
+   platform side), or keep it for re-runs — their call.
 
-   Add `.env` to the user's `.gitignore` if it isn't already. `.env.example`
-   (values-less) is safe to commit.
+Filename is deliberately `.alvera.datalake.env` (not generic `.env`) so
+it doesn't clash with project-level dotenv files.
 
-3. **One-shot literal values typed into the chat** (least preferred
-   but accepted) — skill writes them directly into a tempfile body,
-   runs `alvera datalakes create --body-file`, then `rm`s the
-   tempfile. Values are never echoed back to the user, never written
-   to the YAML receipt, never retained in skill memory beyond the
-   single create call.
+#### (c) One-shot literal values
+
+Least preferred but accepted for small throwaway tests. Skill writes
+values directly into a tempfile body, runs `alvera datalakes create
+--body-file`, then `rm`s the tempfile. Values are never echoed back to
+the user, never written to the YAML receipt, never retained in skill
+memory beyond the single create call.
 
 Hard rules (also in `guardrails.md`):
 

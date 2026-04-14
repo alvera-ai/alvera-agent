@@ -89,6 +89,49 @@ done
 mkdir -p "$FAKE_HOME/.cargo"
 : > "$FAKE_HOME/.cargo/env"
 
+# Write an `activate.sh` the user can `source` in another terminal to
+# join the same isolated environment (same fake HOME, same
+# CLAUDE_CONFIG_DIR, same cwd). Values are baked in at sandbox-creation
+# time so no lookups against the real HOME are needed.
+cat > "$SANDBOX/activate.sh" <<EOF
+# Source this file (do not execute) in another terminal to enter the
+# Alvera sandbox at $SANDBOX. Example:
+#   source $SANDBOX/activate.sh
+#
+# When you're done, \`exit\` or open a fresh shell — the activation is
+# scoped to whatever shell sourced this file.
+
+if [[ "\${BASH_SOURCE[0]:-\$0}" == "\$0" ]]; then
+  echo "activate.sh must be sourced, not executed:" >&2
+  echo "  source \$0" >&2
+  exit 1
+fi
+
+unset ALVERA_PROFILE ALVERA_BASE_URL ALVERA_TENANT ALVERA_EMAIL \\
+      ALVERA_PASSWORD ALVERA_SESSION_TOKEN
+export HOME='$FAKE_HOME'
+export CLAUDE_CONFIG_DIR='$CONFIG_DIR'
+EOF
+
+# Pin toolchain env vars into activate.sh if the corresponding paths
+# were detected on the real HOME. Conditional writes keep the activate
+# script minimal and easy to inspect.
+if [[ -d "$REAL_HOME/.asdf" ]]; then
+  echo "export ASDF_DATA_DIR='$REAL_HOME/.asdf'" >> "$SANDBOX/activate.sh"
+fi
+if [[ -d "$REAL_HOME/.nvm" ]]; then
+  echo "export NVM_DIR='$REAL_HOME/.nvm'" >> "$SANDBOX/activate.sh"
+fi
+
+cat >> "$SANDBOX/activate.sh" <<EOF
+cd '$PROJECT'
+export PS1='(sandbox) \\w \$ '
+echo "Entered Alvera sandbox:"
+echo "  HOME=\$HOME"
+echo "  cwd=\$(pwd)"
+echo "  CLAUDE_CONFIG_DIR=\$CLAUDE_CONFIG_DIR"
+EOF
+
 # Snapshot this repo (excluding VCS, node_modules, and .claude local state).
 if command -v rsync >/dev/null; then
   rsync -a \
@@ -130,7 +173,17 @@ Inside Claude, run:
 Then exercise the guided skill normally. Credentials written by
 \`alvera login\` will land in $FAKE_HOME/.alvera-ai/ — not your real home.
 
-Exit Claude to clean up the sandbox ($([[ $KEEP -eq 1 ]] && echo 'kept' || echo 'auto-deleted')).
+To open a second terminal inside the SAME sandbox (e.g. to run
+\`alvera login\` yourself while Claude is running), open a new shell
+and run:
+
+  source $SANDBOX/activate.sh
+
+The second shell will inherit HOME, CLAUDE_CONFIG_DIR, and the cwd.
+Exit the shell to leave the sandbox (it only affects the shell that
+sourced it).
+
+Cleanup: sandbox will be $([[ $KEEP -eq 1 ]] && echo 'kept (delete with: rm -rf '"$SANDBOX"')' || echo 'auto-deleted when this Claude session exits — pass --keep if you want multi-terminal use').
 ────────────────────────────────────────────────────────────────────────
 INFO
 

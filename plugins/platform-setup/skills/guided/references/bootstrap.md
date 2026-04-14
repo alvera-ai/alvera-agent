@@ -1,5 +1,46 @@
 # Bootstrap (once per session)
 
+## Step 0: toolchain preflight (do this first — before anything else)
+
+Before asking the user anything, confirm the machine can actually run
+the CLI. Every prior step (`whoami`, `ping`, `datalakes list`, resource
+CRUD) goes through `alvera`, so if it's not reachable nothing works.
+
+Run each check in parallel and report **all** missing pieces at once —
+don't discover them one-by-one across four round-trips.
+
+```bash
+node --version          # need >= 20
+npm --version           # any version; needed if pnpm isn't present
+pnpm --version          # optional — alternative to npm
+which alvera            # if installed globally
+npx --version           # needed if alvera isn't globally installed
+```
+
+Decision table:
+
+| Situation                                | Action                                    |
+|------------------------------------------|-------------------------------------------|
+| `node` missing or `< 20`                 | **Refuse.** Tell the user to install Node 20+ (nvm, rtx, asdf, brew, or nodejs.org). Do not attempt to install it yourself — host toolchain is out of scope. |
+| `node` OK, `alvera` on PATH              | Use `alvera <cmd>` directly. Fastest. |
+| `node` OK, `alvera` absent, `npx` works  | Use `npx -p @alvera-ai/platform-sdk alvera <cmd>`. First call downloads the package; subsequent calls hit the npx cache. |
+| `node` OK, both `alvera` and `npx` absent| **Refuse.** Ask the user to either `npm install -g @alvera-ai/platform-sdk` (global) or fix their Node shim so `npx` works (often `asdf reshim nodejs` / `rtx reshim` / `nvm use`). |
+| `pnpm` present, `npm` absent             | Fine — `pnpm add -g @alvera-ai/platform-sdk` as the global-install hint. |
+
+Once the CLI is reachable, pin the exact invocation prefix for the rest
+of the session (`alvera` or `npx -p @alvera-ai/platform-sdk alvera`) and
+use it consistently. Don't mix the two mid-conversation — it's confusing
+when the user reads back their own transcript.
+
+Smoke-test the prefix before moving on:
+
+```bash
+<prefix> --version
+```
+
+Non-zero exit here → stop. Something's wrong with the install; surface
+stderr verbatim and let the user fix it before we continue.
+
 ## Hard prerequisite: a provisioned datalake
 
 **Before anything else**, the target tenant must have at least one

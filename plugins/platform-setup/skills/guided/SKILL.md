@@ -23,22 +23,32 @@ password.
 
 ## Prerequisites (in order)
 
-1. **A provisioned datalake on the target tenant.** This is the first
-   and non-negotiable requirement — every resource this skill creates is
-   scoped to a datalake. If the tenant has none, the skill cannot
-   proceed; tell the user to ask their Alvera admin to provision one,
-   then come back. Datalake creation is admin-only and out of scope.
-2. The `alvera` CLI available (via `npx` or global install).
+1. **Host toolchain reachable.** Node ≥ 20, plus either the `alvera` CLI
+   installed globally *or* a working `npx` (so we can run
+   `npx -p @alvera-ai/platform-sdk alvera ...`). Check **this first** —
+   before asking the user any provisioning questions — and report all
+   missing pieces at once. Do not attempt to install Node / npm / pnpm /
+   the CLI for the user; refuse and hand them the install hint. Full
+   preflight procedure in `references/bootstrap.md` → "Step 0".
+2. **A provisioned datalake on the target tenant.** Non-negotiable —
+   every resource this skill creates is scoped to a datalake. If the
+   tenant has none, the skill cannot proceed; tell the user to ask their
+   Alvera admin to provision one, then come back. Datalake creation is
+   admin-only and out of scope.
 3. A valid session for the target tenant (the user runs `alvera login`
    themselves — see `references/bootstrap.md`).
 
 ## Workflow
 
-1. **Bootstrap the session** — see `references/bootstrap.md`. Confirm the
+1. **Toolchain preflight** — `references/bootstrap.md` → "Step 0". Verify
+   `node --version` (≥ 20) and resolve the `alvera` invocation prefix
+   (global binary vs `npx`). Refuse with install hints if anything is
+   missing.
+2. **Bootstrap the session** — `references/bootstrap.md`. Confirm the
    user has run `alvera login` themselves; verify with `alvera whoami` +
    `alvera ping`; pick the target datalake via `alvera datalakes list`.
-2. **Open the resource loop** — ask what the user wants to set up.
-3. **Per resource:**
+3. **Open the resource loop** — ask what the user wants to set up.
+4. **Per resource:**
    - **List first** to detect collisions (`alvera <resource> list ...`).
    - **Elicit fields** per `references/resources.md`. Enum lists there are
      **hints to guide the conversation**, not authoritative — the CLI/API
@@ -50,7 +60,7 @@ password.
      re-elicit only that field. Do not retry the same payload.
    - **Append to `infra.yaml`** if the receipt is enabled
      (`references/yaml-receipt.md`) — only after a successful (2xx) create.
-4. Loop until the user is done.
+5. Loop until the user is done.
 
 ## Hard constraints
 

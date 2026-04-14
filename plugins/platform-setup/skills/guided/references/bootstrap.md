@@ -1,45 +1,39 @@
 # Bootstrap (once per session)
 
-## Step 0: toolchain preflight (do this first — before anything else)
+## Step 0: is `alvera` reachable?
 
-Before asking the user anything, confirm the machine can actually run
-the CLI. Every prior step (`whoami`, `ping`, `datalakes list`, resource
-CRUD) goes through `alvera`, so if it's not reachable nothing works.
+Before asking the user anything, make sure the CLI actually runs. Every
+subsequent step (`whoami`, `ping`, `datalakes list`, resource CRUD) goes
+through `alvera`, so if it's unreachable nothing works.
 
-Run each check in parallel and report **all** missing pieces at once —
-don't discover them one-by-one across four round-trips.
-
-```bash
-node --version          # need >= 20
-npm --version           # any version; needed if pnpm isn't present
-pnpm --version          # optional — alternative to npm
-which alvera            # if installed globally
-npx --version           # needed if alvera isn't globally installed
-```
-
-Decision table:
-
-| Situation                                | Action                                    |
-|------------------------------------------|-------------------------------------------|
-| `node` missing or `< 20`                 | **Refuse.** Tell the user to install Node 20+ (nvm, rtx, asdf, brew, or nodejs.org). Do not attempt to install it yourself — host toolchain is out of scope. |
-| `node` OK, `alvera` on PATH              | Use `alvera <cmd>` directly. Fastest. |
-| `node` OK, `alvera` absent, `npx` works  | Use `npx -p @alvera-ai/platform-sdk alvera <cmd>`. First call downloads the package; subsequent calls hit the npx cache. |
-| `node` OK, both `alvera` and `npx` absent| **Refuse.** Ask the user to either `npm install -g @alvera-ai/platform-sdk` (global) or fix their Node shim so `npx` works (often `asdf reshim nodejs` / `rtx reshim` / `nvm use`). |
-| `pnpm` present, `npm` absent             | Fine — `pnpm add -g @alvera-ai/platform-sdk` as the global-install hint. |
-
-Once the CLI is reachable, pin the exact invocation prefix for the rest
-of the session (`alvera` or `npx -p @alvera-ai/platform-sdk alvera`) and
-use it consistently. Don't mix the two mid-conversation — it's confusing
-when the user reads back their own transcript.
-
-Smoke-test the prefix before moving on:
+Try the two invocation forms in order and pin whichever one succeeds as
+the prefix for the rest of the session:
 
 ```bash
-<prefix> --version
+# 1. already installed globally?
+alvera --version
+
+# 2. otherwise, run it via npx (first call downloads, later calls cache)
+npx -p @alvera-ai/platform-sdk alvera --version
 ```
 
-Non-zero exit here → stop. Something's wrong with the install; surface
-stderr verbatim and let the user fix it before we continue.
+- Either works → pin that prefix and move on. Don't mix the two
+  mid-conversation; it confuses the transcript.
+- Both fail → tell the user to install it:
+
+  ```bash
+  npm install -g @alvera-ai/platform-sdk
+  # or, if they use pnpm:
+  pnpm add -g @alvera-ai/platform-sdk
+  ```
+
+  Wait for them to confirm install succeeded, then re-run
+  `alvera --version`. Do **not** run the install yourself — host
+  toolchain mutation is out of scope.
+
+If `npm` / `pnpm` itself is missing, that's a Node install problem one
+level lower — point the user at nvm / rtx / asdf / homebrew / nodejs.org
+in a single sentence and stop there. Don't try to diagnose shims.
 
 ## Hard prerequisite: a provisioned datalake
 

@@ -23,13 +23,14 @@ password.
 
 ## Prerequisites (in order)
 
-1. **Host toolchain reachable.** Node ≥ 20, plus either the `alvera` CLI
-   installed globally *or* a working `npx` (so we can run
-   `npx -p @alvera-ai/platform-sdk alvera ...`). Check **this first** —
-   before asking the user any provisioning questions — and report all
-   missing pieces at once. Do not attempt to install Node / npm / pnpm /
-   the CLI for the user; refuse and hand them the install hint. Full
-   preflight procedure in `references/bootstrap.md` → "Step 0".
+1. **`alvera` CLI reachable.** Either installed globally
+   (`npm install -g @alvera-ai/platform-sdk` or `pnpm add -g ...`) or
+   runnable via `npx -p @alvera-ai/platform-sdk alvera`. Verify this
+   **first** — before asking the user any provisioning questions — by
+   attempting `alvera --version` then `npx ... alvera --version`. If
+   both fail, hand the user the install command and stop; do not try to
+   install the CLI (or Node) yourself. Full procedure in
+   `references/bootstrap.md` → "Step 0".
 2. **A provisioned datalake on the target tenant.** Non-negotiable —
    every resource this skill creates is scoped to a datalake. If the
    tenant has none, the skill cannot proceed; tell the user to ask their
@@ -40,10 +41,10 @@ password.
 
 ## Workflow
 
-1. **Toolchain preflight** — `references/bootstrap.md` → "Step 0". Verify
-   `node --version` (≥ 20) and resolve the `alvera` invocation prefix
-   (global binary vs `npx`). Refuse with install hints if anything is
-   missing.
+1. **Resolve the `alvera` prefix** — `references/bootstrap.md` → "Step 0".
+   Try `alvera --version`, then `npx -p @alvera-ai/platform-sdk alvera --version`.
+   Pin whichever works. If both fail, hand the user
+   `npm install -g @alvera-ai/platform-sdk` and stop.
 2. **Bootstrap the session** — `references/bootstrap.md`. Confirm the
    user has run `alvera login` themselves; verify with `alvera whoami` +
    `alvera ping`; pick the target datalake via `alvera datalakes list`.

@@ -25,6 +25,6 @@ behavior contract.
 ## Install
 
 ```
-/plugin marketplace add alvera-ai/alvera-platform-infra
-/plugin install platform-setup@alvera-platform-infra
+/plugin marketplace add alvera-ai/alvera-agent
+/plugin install platform-setup@alvera-agent
 ```

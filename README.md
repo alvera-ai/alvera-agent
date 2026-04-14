@@ -1,4 +1,4 @@
-# alvera-platform-infra
+# alvera-agent
 
 Claude Code marketplace for Alvera platform plugins.
 
@@ -13,8 +13,8 @@ Claude Code marketplace for Alvera platform plugins.
 In Claude Code:
 
 ```
-/plugin marketplace add alvera-ai/alvera-platform-infra
-/plugin install platform-setup@alvera-platform-infra
+/plugin marketplace add alvera-ai/alvera-agent
+/plugin install platform-setup@alvera-agent
 ```
 
 Then invoke a skill from this plugin with:

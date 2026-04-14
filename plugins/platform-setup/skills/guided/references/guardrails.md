@@ -151,8 +151,10 @@ Before `alvera data-sources update` / `tools update` /
 
 1. Fetch the current entity (`alvera <resource> get ...` or `list` +
    filter on the JSON output).
-2. Show the user the current values.
-3. Show the proposed diff.
+2. Show the user the current values **as a plain-language summary**,
+   not raw JSON.
+3. Show the proposed changes as `old → new` bullets (e.g.
+   "status: active → inactive"), not a JSON diff.
 4. Require explicit confirmation before invoking `update`.
 
 ## Errors

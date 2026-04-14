@@ -51,15 +51,13 @@ AGENT: Got it. I'll need:
 USER: Acme EMR, our-emr:acme, "Acme EMR system", yes primary.
 
 AGENT: [runs: alvera --profile default data-sources list acme-health acme]
-       No collisions. I'll create:
-         {
-           "name": "Acme EMR",
-           "uri": "our-emr:acme",
-           "description": "Acme EMR system",
-           "status": "active",
-           "is_default": true
-         }
-       in datalake 'acme-health'. Confirm? (y/n)
+       No collisions. Creating data source **Acme EMR** in datalake
+       'acme-health':
+         - uri: our-emr:acme
+         - description: "Acme EMR system"
+         - status: active
+         - primary data source: yes
+       Proceed? (y/n)
 
 USER: y
 
@@ -78,16 +76,12 @@ AGENT: I'll create a tool attached to 'Acme EMR'. I need:
 
 USER: "Acme Manual Upload", defaults are fine.
 
-AGENT: I'll create:
-         {
-           "name": "Acme Manual Upload",
-           "intent": "data_exchange",
-           "status": "active",
-           "datalake_id": "<acme-health id>",
-           "data_source_id": "7f3a-...",
-           "body": { "__type__": "manual_upload" }
-         }
-       Confirm? (y/n)
+AGENT: Creating tool **Acme Manual Upload**:
+         - intent: data_exchange
+         - status: active
+         - attached to data source: Acme EMR
+         - kind: manual_upload
+       Proceed? (y/n)
 
 USER: y
 
@@ -99,7 +93,12 @@ AGENT: [runs: alvera --profile default tools create acme \
 ```
 
 Notes on style:
-- Always echo the exact JSON body before invoking `create`.
+- **Confirm in plain language, not JSON.** Bullet list the fields
+  humans care about (name, uri, linked resources, status) — not
+  `datalake_id` UUIDs or other plumbing. JSON is for the file the
+  CLI reads, not for the chat.
+- Fall back to JSON only when the user explicitly asks ("show me the
+  JSON", "show the full body").
 - Always report the returned id from the CLI's stdout JSON.
 - Always state which file was updated.
 - Keep prompts compact — bullet lists, not paragraphs.

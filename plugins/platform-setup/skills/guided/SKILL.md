@@ -57,7 +57,13 @@ password.
    - **Elicit fields** per `references/resources.md`. Enum lists there are
      **hints to guide the conversation**, not authoritative — the CLI/API
      is the source of truth.
-   - **Echo the JSON body** for explicit confirmation.
+   - **Summarise in plain language** for explicit confirmation — a
+     compact bulleted recap of the fields, not a JSON dump. Raw JSON
+     belongs in the tempfile that goes to `--body-file`, not in chat.
+     Example: "Creating data source **prime-emr-source** (uri
+     `our-emr:prime-emr-source`, status active, not default). Proceed?"
+     Only fall back to a JSON-ish form when the user explicitly asks
+     ("show me the JSON", "show the full body").
    - **Call create** via the CLI (`references/cli-cheatsheet.md`). Treat
      any non-zero exit / 4xx as an authoritative validation failure:
      surface the stderr verbatim, map it back to the offending field, and

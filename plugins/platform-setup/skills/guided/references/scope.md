@@ -7,11 +7,15 @@
 | `datalakes`             | list, get, create                           |
 | `dataSources`           | list, create, update                        |
 | `tools`                 | list, get, create, update, delete           |
-| `genericTables`         | list, create                                |
 | `actionStatusUpdaters`  | list, create, update                        |
 | `aiAgents`              | list, get, create, update, delete           |
 | `connectedApps`         | list, get, create, update, syncRoutes       |
 | `ping`                  | health check                                |
+
+Generic tables (custom datasets) are **not** handled by this skill —
+they live in `custom-dataset-creation` because the flow needs a
+compliance gate and column-profiling steps that don't fit the generic
+resource loop.
 
 Datalake creation is in scope but is sensitive — it takes DB
 credentials (four roles × password/host/port/schema/SSL/auth). See

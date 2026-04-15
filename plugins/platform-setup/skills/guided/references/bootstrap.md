@@ -37,8 +37,8 @@ in a single sentence and stop there. Don't try to diagnose shims.
 
 ## Datalake presence
 
-Most resources (data sources, tools, generic tables, AI agents,
-connected apps) are datalake-scoped, so we need one before we can
+Most resources (data sources, tools, AI agents, connected apps,
+generic tables) are datalake-scoped, so we need one before we can
 provision anything else. The `datalakes list` step below finds out
 whether the tenant has one.
 

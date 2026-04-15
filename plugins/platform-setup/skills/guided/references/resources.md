@@ -217,29 +217,25 @@ For `auth_method: assume_role`, require `assume_role_arn` and
 
 ## Generic table
 
-`alvera generic-tables create <datalake> [tenant] --body-file <path>`
+**Out of scope for this skill — hand off to `custom-dataset-creation`.**
 
-| Field         | Required | Default | Notes                                                                 |
-|---------------|----------|---------|-----------------------------------------------------------------------|
-| `title`       | **yes**  | —       | Human-readable                                                        |
-| `description` | no       | `""`    | —                                                                     |
-| `data_domain` | no       | `null`  | Enum: `healthcare \| core_banking \| payment_risk \| accounts_receivable \| service_commerce \| trading \| null` |
-| `columns`     | **yes**  | —       | Length ≥ 1                                                            |
+Generic-table (custom dataset) creation involves a compliance gate
+("can I read this file?"), column profiling (inline for dummy data, or
+a local Python script for regulated data), and a schema proposal with
+privacy + uniqueness semantics that need dedicated handling. That
+belongs in a focused skill rather than being one option in the resource
+loop.
 
-### Column shape
+When the user asks to create a generic table / custom dataset / onboard
+a table from a file, say:
 
-| Field                 | Required | Default  | Notes                                                            |
-|-----------------------|----------|----------|------------------------------------------------------------------|
-| `name`                | **yes**  | —        | snake_case identifier                                            |
-| `title`               | no       | —        | Human-readable                                                   |
-| `type`                | no       | `string` | Enum: `string \| integer \| float \| boolean \| date \| datetime \| time` |
-| `description`         | **yes**  | —        | —                                                                |
-| `privacy_requirement` | no       | `none`   | Enum: `none \| tokenize \| redact_only`                          |
-| `is_required`         | no       | `false`  | —                                                                |
-| `is_unique`           | no       | `false`  | —                                                                |
-| `is_array`            | no       | `false`  | —                                                                |
+> "Custom dataset creation lives in the `custom-dataset-creation` skill
+> — it walks through the file, proposes columns, and handles the
+> privacy-locked-at-creation rule. Want me to hand off?"
 
-Ask column-by-column. Reject tables with zero columns.
+If they agree, stop the `guided` loop for that turn and invoke the
+other skill. The new skill assumes the session + datalake are already
+set up (which `guided` has just done), so it picks up cleanly.
 
 ---
 

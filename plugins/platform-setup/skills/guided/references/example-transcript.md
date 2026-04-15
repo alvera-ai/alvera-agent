@@ -41,10 +41,11 @@ AGENT: [runs: alvera --profile default whoami]
        that. What's next? You can set up a:
          - data source
          - tool
-         - generic table
          - action status updater
          - AI agent
          - connected app
+         (custom datasets / generic tables → `custom-dataset-creation`
+          skill — say the word and I'll hand off)
 
 USER: A data source for our EMR.
 
@@ -71,8 +72,9 @@ AGENT: [runs: alvera --profile default data-sources create acme-health acme \
               --body '{"name":"Acme EMR","uri":"our-emr:acme",...}']
        Created data source 'Acme EMR' (id: 7f3a-...).
        Appended to infra.yaml.
-       What's next? (data source / tool / generic table / action status
-       updater / AI agent / connected app — or "done")
+       What's next? (data source / tool / action status updater / AI
+       agent / connected app — or "done"; custom datasets are handled
+       by the `custom-dataset-creation` skill)
 
 USER: A manual upload tool for it.
 
@@ -96,16 +98,18 @@ AGENT: [runs: alvera --profile default tools create acme \
               --body-file /tmp/tool.json]
        Created tool 'Acme Manual Upload' (id: 9b2e-...).
        Appended to infra.yaml.
-       What's next? (data source / tool / generic table / action status
-       updater / AI agent / connected app — or "done")
+       What's next? (data source / tool / action status updater / AI
+       agent / connected app — or "done"; custom datasets are handled
+       by the `custom-dataset-creation` skill)
 ```
 
 Notes on style:
 - **Always list the options when asking "what's next?"**. After every
   successful create (and at the initial prompt), repeat the inline
-  menu — data source / tool / generic table / action status updater /
-  AI agent / connected app — plus a "done" escape. Users shouldn't
-  have to remember the catalogue.
+  menu — data source / tool / action status updater / AI agent /
+  connected app — plus a "done" escape, and the pointer to
+  `custom-dataset-creation` for generic tables. Users shouldn't have
+  to remember the catalogue.
 - **Confirm in plain language, not JSON.** Bullet list the fields
   humans care about (name, uri, linked resources, status) — not
   `datalake_id` UUIDs or other plumbing. JSON is for the file the

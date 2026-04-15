@@ -2,17 +2,19 @@
 name: guided
 description: >
   Conversationally provision Alvera platform resources (datalakes, data sources, tools,
-  generic tables, action status updaters, AI agents, connected apps) on an existing
-  tenant. A datalake is required for most resources — if the tenant has none, the skill
-  will offer to create one first (DB credentials elicited conversationally; secrets
-  handled via env vars or a `.env` file, never inlined). Use when the user wants to set
-  up infrastructure on Alvera, "create a datalake", "create a data source", "add a tool",
-  "wire up an AI agent", or similar. Drives the `alvera` CLI shipped by
-  `@alvera-ai/platform-sdk` via `npx`. Auth is session-based — the user runs `alvera login`
-  themselves once; the skill never sees the password. Never asks the user for a YAML file —
-  elicits fields conversationally and emits an infra.yaml receipt. Do NOT use for tenant
-  provisioning (admin-only) or for runtime ops like dataset search, workflow execution,
-  or data activation ingest.
+  action status updaters, AI agents, connected apps) on an existing tenant. A datalake is
+  required for most resources — if the tenant has none, the skill will offer to create one
+  first (DB credentials elicited conversationally; secrets handled via env vars or a `.env`
+  file, never inlined). Use when the user wants to set up infrastructure on Alvera, "create
+  a datalake", "create a data source", "add a tool", "wire up an AI agent", or similar.
+  Drives the `alvera` CLI shipped by `@alvera-ai/platform-sdk` via `npx`. Auth is
+  session-based — the user runs `alvera login` themselves once; the skill never sees the
+  password. Never asks the user for a YAML file — elicits fields conversationally and emits
+  an infra.yaml receipt. For custom dataset / generic-table creation from a sample file
+  (CSV / NDJSON), hand off to the `custom-dataset-creation` skill — it owns the compliance
+  gate, column profiling, and schema proposal flow. Do NOT use for tenant provisioning
+  (admin-only) or for runtime ops like dataset search, workflow execution, or data
+  activation ingest.
 ---
 
 # Alvera Platform — Guided Setup
@@ -53,10 +55,11 @@ password.
    `alvera ping`; pick the target datalake via `alvera datalakes list`.
 3. **Open the resource loop** — ask what the user wants to set up,
    **and always list the options inline**. Example: "What's next? You
-   can set up a data source, tool, generic table, action status
-   updater, AI agent, or connected app." Repeat the option list every
-   time you return to the loop (after each successful create or skip)
-   — don't assume the user remembers.
+   can set up a data source, tool, action status updater, AI agent, or
+   connected app. For a custom dataset / generic table from a sample
+   file, I'll hand you off to the `custom-dataset-creation` skill."
+   Repeat the option list every time you return to the loop (after each
+   successful create or skip) — don't assume the user remembers.
 4. **Per resource:**
    - **List first** to detect collisions (`alvera <resource> list ...`).
    - **Elicit fields** per `references/resources.md`. Enum lists there are

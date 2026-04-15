@@ -31,10 +31,10 @@ flowchart LR
 
     subgraph dac ["/DAC-upload"]
         direction TB
-        start2([user invokes]) --> elicit1[DAC slug · file path<br/>· optional tenant]
-        elicit1 --> link[alvera data-activation-clients<br/>upload-link<br/>→ presigned url + key]
+        start2([user invokes]) --> elicit1[datalake slug · DAC slug<br/>· file path · optional tenant]
+        elicit1 --> link[alvera <b>datalakes</b><br/>upload-link &lt;datalake&gt;<br/>→ presigned url + key]
         link --> put[curl -X PUT<br/>Content-Type must match<br/>--upload-file → presigned url]
-        put --> ingest[alvera data-activation-clients<br/>ingest-file &lt;slug&gt; &lt;key&gt;<br/>→ batch_id · jobs_count]
+        put --> ingest[alvera <b>data-activation-clients</b><br/>ingest-file &lt;dac&gt; &lt;key&gt;<br/>→ batch_id · jobs_count]
     end
 
     subgraph qd ["/query-datasets"]
@@ -108,15 +108,16 @@ See [`skills/custom-dataset-creation/SKILL.md`](./skills/custom-dataset-creation
 
 ### `DAC-upload` — `/platform-setup:DAC-upload`
 
-Push a file into a data-activation-client. Three steps:
+Push a file into a data-activation-client. Three steps, **two slugs**:
 
-1. `alvera data-activation-clients upload-link` → presigned PUT URL
+1. `alvera datalakes upload-link <datalake>` → presigned PUT URL
 2. `curl -X PUT` to stream the file to object storage
-3. `alvera data-activation-clients ingest-file` → trigger processing
+3. `alvera data-activation-clients ingest-file <dac>` → trigger processing
 
-Supports CSV and NDJSON — the only formats the API accepts. The user
-supplies the DAC slug (DAC CRUD isn't on the public API; the slug
-comes from the Alvera admin UI). One file per invocation.
+Upload provisioning is datalake-scoped (the storage belongs to the
+lake); ingest is DAC-scoped (the DAC interprets the file). The user
+supplies both slugs (DAC CRUD isn't on the public API). Supports CSV
+and NDJSON only. One file per invocation.
 
 See [`skills/DAC-upload/SKILL.md`](./skills/DAC-upload/SKILL.md).
 

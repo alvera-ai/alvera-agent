@@ -3,16 +3,21 @@
 Three steps, in order. Each step has a non-retryable failure mode —
 surface the error to the user and stop, don't paper over.
 
-## Step 1 — request a presigned URL
+## Step 1 — request a presigned URL (datalake-scoped)
 
 ```bash
-alvera --profile <p> data-activation-clients upload-link \
-  <dac_slug> <filename> [tenant] \
+alvera --profile <p> datalakes upload-link \
+  <datalake_slug> <filename> [tenant] \
   --content-type <mime>
 ```
 
+Upload provisioning is a datalake concern (the storage belongs to the
+lake); ingestion (step 3) is a DAC concern (the DAC interprets the
+file). Two different slugs.
+
 Inputs:
-- `<dac_slug>` — from the user.
+- `<datalake_slug>` — the datalake whose object storage receives the
+  file. From `alvera datalakes list` or `guided`'s session state.
 - `<filename>` — basename of the local file (e.g. `patients.ndjson`).
   Used server-side to derive the object's extension.
 - `<mime>` — `text/csv` or `application/x-ndjson`. Must match the
@@ -112,6 +117,7 @@ Failure modes:
 ```bash
 set -e
 PROFILE=default
+DATALAKE=prime-medical-datalake
 DAC=acme-emr-dac
 FILE=./patients-2026-04-13.ndjson
 TENANT=acme
@@ -124,18 +130,21 @@ esac
 
 FILENAME=$(basename "$FILE")
 
-LINK_JSON=$(alvera --profile "$PROFILE" data-activation-clients upload-link \
-  "$DAC" "$FILENAME" "$TENANT" --content-type "$CT")
+# Step 1 — ask the datalake for a presigned upload URL.
+LINK_JSON=$(alvera --profile "$PROFILE" datalakes upload-link \
+  "$DATALAKE" "$FILENAME" "$TENANT" --content-type "$CT")
 
 URL=$(printf '%s' "$LINK_JSON" | python3 -c 'import sys,json; print(json.load(sys.stdin)["url"])')
 KEY=$(printf '%s' "$LINK_JSON" | python3 -c 'import sys,json; print(json.load(sys.stdin)["key"])')
 
+# Step 2 — PUT the file to that presigned URL.
 curl --fail --show-error --silent \
   -X PUT \
   -H "Content-Type: $CT" \
   --upload-file "$FILE" \
   "$URL"
 
+# Step 3 — tell the DAC to ingest the uploaded key.
 alvera --profile "$PROFILE" data-activation-clients ingest-file \
   "$DAC" "$KEY" "$TENANT"
 ```
@@ -143,3 +152,13 @@ alvera --profile "$PROFILE" data-activation-clients ingest-file \
 Use `python3` (not `jq`) for the JSON parse so we don't assume a
 third-party CLI is installed. Python is already a prereq for the
 `custom-dataset-creation` profiler.
+
+Two slugs in play:
+- `$DATALAKE` (e.g. `prime-medical-datalake`) — used in step 1, names
+  the storage container that issues the presigned URL.
+- `$DAC` (e.g. `acme-emr-dac`) — used in step 3, names the activation
+  client that interprets the file.
+
+These can be different (one datalake, many DACs is the common shape).
+Surface both clearly in the user-facing recap so a wrong slug error
+maps to the right field.

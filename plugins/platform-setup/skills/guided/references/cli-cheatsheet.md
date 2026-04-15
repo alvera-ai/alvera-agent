@@ -1,8 +1,8 @@
 # CLI cheat sheet
 
 CLI: `alvera`, shipped by
-[`@alvera-ai/platform-sdk`](https://www.npmjs.com/package/@alvera-ai/platform-sdk)
-(>= 0.2.0).
+[`@alvera-ai/platform-sdk`](https://www.npmjs.com/package/@alvera-ai/platform-sdk).
+Always use the latest published version.
 
 ```bash
 # Zero-install
@@ -49,12 +49,15 @@ tenant. All `create` / `update` commands take exactly one of
 
 ```bash
 # Datalakes
-alvera datalakes list   [tenant]
-alvera datalakes get    <id> [tenant]
-alvera datalakes create [tenant]                    --body-file <path>
+alvera datalakes list        [tenant]
+alvera datalakes get         <id> [tenant]
+alvera datalakes create      [tenant]                          --body-file <path>
+alvera datalakes upload-link <datalake> <filename> [tenant]    --content-type text/csv|application/x-ndjson
 # Prefer --body-file over --body '<json>' for datalake create — the payload
 # contains DB passwords. See resources.md → "Datalake" for the three
 # credential-sourcing patterns (env vars, .env, one-shot literal).
+# upload-link returns { url, key, expires_in }. Drives the DAC-upload skill;
+# pair it with `data-activation-clients ingest-file <dac> <key>` (below).
 
 # Data sources
 alvera data-sources list   <datalake> [tenant]
@@ -94,6 +97,13 @@ alvera connected-apps get         <datalake> <id> [tenant]
 alvera connected-apps create      <datalake> [tenant]      --body '<json>' | --body-file <path>
 alvera connected-apps update      <datalake> <id> [tenant] --body '<json>' | --body-file <path>
 alvera connected-apps sync-routes <datalake> <id> [tenant]
+
+# Data activation clients — runtime ingest only (CRUD not on public API).
+# `ingest-file` triggers processing of a file previously uploaded via
+# `datalakes upload-link` (above). Drives the `DAC-upload` skill — don't
+# invoke directly from `guided`.
+alvera data-activation-clients ingest      <slug> [tenant]      --body '<json>' | --body-file <path>
+alvera data-activation-clients ingest-file <slug> <key> [tenant]
 ```
 
 ## Output and errors

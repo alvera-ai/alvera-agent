@@ -12,7 +12,9 @@ description: >
   etc. Independently invokable. Elicits PostgREST base URL, schema
   (Accept-Profile), JWT (secret — never echoed, never persisted beyond
   `.env.local` in scaffold mode and a chmod 600 tempfile in chat mode), and
-  table name. Does NOT run `npm install`, does NOT auto-open a browser.
+  table name. After scaffolding, asks whether to start the dev server (runs
+  `npm install` + `npm run dev` only on explicit yes). Never auto-opens a
+  browser.
 ---
 
 # Query datasets (PostgREST)
@@ -144,11 +146,12 @@ wrong, the app will surface the PostgREST error verbatim on Run.
     so if the user runs `git add` mid-scaffold the JWT doesn't get
     staged. `chmod 600 .env.local` immediately after write.
 
-6b. **Tell the user how to run it.** Do not run `npm install` yourself
-    — the user may use `pnpm` / `yarn` / `bun`, and their toolchain
-    (asdf / nvm / rtx) is theirs.
+6b. **Tell the user how to run it, and offer to start it.** Do not run
+    `npm install` unprompted — the user may use `pnpm` / `yarn` / `bun`,
+    and their toolchain (asdf / nvm / rtx) is theirs. But do *ask*
+    whether they want you to start it for them.
 
-    > "Generated ./patients-explorer/. Run:
+    > "Generated ./patients-explorer/. To run it yourself:
     >
     >   cd patients-explorer && npm install && npm run dev
     >
@@ -162,7 +165,17 @@ wrong, the app will surface the PostgREST error verbatim on Run.
     > https://postgrest.org/en/stable/references/api/tables_views.html
     >
     > JWT is in `.env.local` — gitignored, do not commit. Rotate if it
-    > leaks. Another explorer, or done?"
+    > leaks.
+    >
+    > **Want me to start the app for you?** I'd run `npm install` (npm,
+    > since you didn't say otherwise) and `npm run dev` in the
+    > background and hand you the URL. Or: another explorer, or done?"
+
+    If the user says yes, run `npm install` then `npm run dev` as a
+    background process from inside the scaffold dir, wait for Vite's
+    "Local: http://…" line, and surface that URL. If they name a
+    different package manager (pnpm/yarn/bun), use it. Don't auto-open
+    a browser — just hand them the URL.
 
 ## Hard constraints
 
@@ -176,10 +189,11 @@ wrong, the app will surface the PostgREST error verbatim on Run.
     history.
 - **`.gitignore` before `.env.local`** (scaffold mode). Write order
   matters.
-- **Don't run `npm install`** (scaffold mode). That's the user's call.
-  Scaffold and stop.
-- **Don't auto-open a browser** (scaffold mode). Print the run command
-  and let Vite print the URL.
+- **Never run `npm install` unprompted** (scaffold mode). Scaffold,
+  print the run command, then *ask* whether to start it. Run install +
+  dev server only on explicit yes.
+- **Don't auto-open a browser** (scaffold mode). Even when starting the
+  dev server on the user's behalf, just hand them the URL Vite prints.
 - **Chat mode is a compliance opt-in.** If the user picked (a), results
   can legitimately appear in chat. If they hesitate ("maybe?") re-ask
   — don't default to rendering regulated rows just because elicitation

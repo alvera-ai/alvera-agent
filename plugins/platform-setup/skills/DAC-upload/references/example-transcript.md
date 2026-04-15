@@ -3,13 +3,17 @@
 ```
 USER: /DAC-upload
 
-AGENT: I need three things to upload:
-         1. The **data-activation-client slug** (e.g. acme-emr-dac).
-         2. The **file path** to upload (CSV or NDJSON only).
-         3. Optional: a **tenant slug** if your profile doesn't default
+AGENT: I need four things to upload:
+         1. The **datalake slug** (e.g. prime-medical-datalake) —
+            issues the presigned upload URL.
+         2. The **DAC slug** (e.g. acme-emr-dac) — triggers ingest
+            after the file lands.
+         3. The **file path** (CSV or NDJSON only).
+         4. Optional: a **tenant slug** if your profile doesn't default
             to the right one.
 
-USER: dac=acme-emr-dac, file=./patients-2026-04-13.ndjson, tenant=acme
+USER: datalake=prime-medical-datalake, dac=acme-emr-dac,
+      file=./patients-2026-04-13.ndjson, tenant=acme
 
 AGENT: [stat ./patients-2026-04-13.ndjson → 48291 lines, 12.4 MiB]
        [extension .ndjson → content-type application/x-ndjson]
@@ -17,15 +21,16 @@ AGENT: [stat ./patients-2026-04-13.ndjson → 48291 lines, 12.4 MiB]
        Uploading:
          - file: ./patients-2026-04-13.ndjson (48,291 lines, 12.4 MiB)
          - content type: application/x-ndjson
-         - DAC: acme-emr-dac
+         - datalake: prime-medical-datalake (issues the presigned URL)
+         - DAC: acme-emr-dac (triggers ingest after upload)
          - tenant: acme
 
        Proceed? (y/n)
 
 USER: y
 
-AGENT: [runs: alvera --profile default data-activation-clients upload-link \
-              acme-emr-dac patients-2026-04-13.ndjson acme \
+AGENT: [runs: alvera --profile default datalakes upload-link \
+              prime-medical-datalake patients-2026-04-13.ndjson acme \
               --content-type application/x-ndjson]
        → key: api-ingest/f2c9.../uploads/1a2b3c4d.ndjson
          (url elided — signed, short-lived)

@@ -2,26 +2,30 @@
 name: DAC-upload
 description: >
   Push a sample file into a data-activation-client (DAC) for bulk ingestion.
-  Three-step flow: request a presigned upload URL from Alvera
-  (`alvera data-activation-clients upload-link`), PUT the file to object
-  storage, then trigger processing (`alvera data-activation-clients
-  ingest-file`). Supports CSV and NDJSON — the only two content types the
+  Three-step flow: request a presigned upload URL from the **datalake**
+  (`alvera datalakes upload-link`), PUT the file to object storage, then
+  trigger processing on the **DAC** (`alvera data-activation-clients
+  ingest-file`). Upload-link is datalake-scoped (it provisions storage),
+  ingest-file is DAC-scoped (it interprets the file) — the skill needs
+  **both** slugs. Supports CSV and NDJSON — the only two content types the
   API accepts. Use when the user says "upload a file to the DAC", "ingest a
-  sample file", "push CSV into activation client X", or similar. Assumes the
-  user already has the DAC slug (this skill does not create DACs — DAC CRUD
-  isn't on the public API; the slug comes from the Alvera UI or an admin).
-  Designed to be runnable right after `custom-dataset-creation`, but is
-  independently invokable — does not need a prior skill in the chain.
+  sample file", "push CSV into activation client X", or similar. Assumes
+  the user already has the datalake slug + DAC slug (this skill does not
+  create either — DAC CRUD isn't on the public API; both slugs come from
+  the Alvera UI or an admin). Designed to run right after
+  `custom-dataset-creation`, but is independently invokable.
 ---
 
 # DAC upload
 
-Three CLI calls, in order:
+Three CLI calls, in order. The presigned URL is provisioned by the
+**datalake**; the ingest is triggered on the **DAC**. Two different
+slugs.
 
-1. `alvera data-activation-clients upload-link <dac_slug> <filename>
+1. `alvera datalakes upload-link <datalake_slug> <filename>
    [tenant] --content-type <mime>` → returns `{ url, key, expires_in }`.
    `url` is a presigned HTTPS PUT URL (S3 / R2).
-2. `curl -X PUT -H "Content-Type: <mime>" --data-binary @<file> "<url>"`
+2. `curl -X PUT -H "Content-Type: <mime>" --upload-file <file> "<url>"`
    → uploads the file to storage. The `Content-Type` header **must**
    match what was sent in step 1, or the presigned URL will reject.
 3. `alvera data-activation-clients ingest-file <dac_slug> <key>
@@ -31,21 +35,24 @@ Three CLI calls, in order:
 ## Prerequisites
 
 - `alvera` CLI reachable, active session. If not, route to `guided`.
-- **DAC slug** — the user supplies it. This skill does not list or
-  create DACs (the public API exposes neither). Typical source: Alvera
-  admin UI, or a previous invocation of the `guided` skill wiring up
-  the client.
+- **Datalake slug** — for the upload-link call. From `guided`'s
+  `datalakes list` or the Alvera admin UI.
+- **DAC slug** — for the ingest-file call. The user supplies it; this
+  skill does not list or create DACs (the public API exposes neither).
 - **File path** — CSV or NDJSON. Other formats rejected by the API
   (`content_type` enum is `text/csv | application/x-ndjson`).
 
 ## Workflow
 
-1. **Elicit the three inputs in one prompt:**
+1. **Elicit the four inputs in one prompt:**
 
-   > "I need three things to upload:
-   >   1. The **data-activation-client slug** (e.g. `acme-emr-dac`).
-   >   2. The **file path** to upload (CSV or NDJSON only).
-   >   3. Optional: a **tenant slug** if your profile doesn't default
+   > "I need four things to upload:
+   >   1. The **datalake slug** (e.g. `prime-medical-datalake`) — used
+   >      to provision the presigned upload URL.
+   >   2. The **DAC slug** (e.g. `acme-emr-dac`) — used to trigger
+   >      ingestion of the uploaded file.
+   >   3. The **file path** to upload (CSV or NDJSON only).
+   >   4. Optional: a **tenant slug** if your profile doesn't default
    >      to the right one.
    > What are they?"
 
@@ -65,7 +72,8 @@ Three CLI calls, in order:
    > "Uploading:
    >   - file: `./patients-2026-04-13.ndjson` (48,291 lines, 12.4 MiB)
    >   - content type: `application/x-ndjson`
-   >   - DAC: `acme-emr-dac`
+   >   - datalake: `prime-medical-datalake` (issues the presigned URL)
+   >   - DAC: `acme-emr-dac` (triggers ingest after upload)
    >   - tenant: `acme` (from profile)
    >
    > Proceed? (y/n)"

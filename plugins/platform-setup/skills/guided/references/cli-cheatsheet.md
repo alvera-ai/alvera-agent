@@ -68,7 +68,9 @@ alvera tools create [tenant]                        --body '<json>' | --body-fil
 alvera tools update <id> [tenant]                   --body '<json>' | --body-file <path>
 alvera tools delete <id> [tenant]
 
-# Generic tables
+# Generic tables — CLI documented here for completeness, but the flow
+# (compliance gate, column profiling, schema proposal) lives in the
+# `custom-dataset-creation` skill. Don't drive this from `guided`.
 alvera generic-tables list   <datalake> [tenant]
 alvera generic-tables create <datalake> [tenant]    --body '<json>' | --body-file <path>
 

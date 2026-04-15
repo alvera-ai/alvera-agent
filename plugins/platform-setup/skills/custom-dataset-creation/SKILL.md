@@ -99,6 +99,22 @@ Output is a row appended to `infra.yaml`.
 7. **Append to `infra.yaml`** under `generic_tables:` — only on 2xx.
    Schema: `references/create.md`.
 
+8. **Stop. Point to the next skills.** This skill creates one dataset.
+   After a successful create, say:
+
+   > "Done — `<table>` is created. Next, you probably want to:
+   >
+   >   - **Upload a sample file** to verify ingestion works → run
+   >     `/DAC-upload` (needs the data-activation-client slug).
+   >   - **Query the table** once data has landed → run
+   >     `/query-datasets` (scaffolds a local PostgREST + React
+   >     explorer).
+   >
+   > Another dataset here, or done?"
+
+   Do not run either follow-up skill automatically. They're separate
+   entry points — let the user invoke them explicitly.
+
 ## Hard constraints
 
 - **Compliance gate is non-negotiable.** If the user picks (c), do not
@@ -126,3 +142,10 @@ Output is a row appended to `infra.yaml`.
 - `references/column-proposal.md` — per-field elicitation and type inference
 - `references/create.md` — CLI call, body shape, YAML receipt append
 - `references/example-transcript.md` — reference end-to-end dialog
+
+Downstream skills (invoked separately by the user):
+
+- `DAC-upload` — push a sample file through a data-activation-client via
+  `upload-link` + `ingest-file`
+- `query-datasets` — scaffold a local Vite + React explorer hitting
+  PostgREST, for row-level verification

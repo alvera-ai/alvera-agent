@@ -51,7 +51,13 @@ AGENT: [runs: alvera --profile default generic-tables list prime-health]
        `privacy_requirement` is now locked on all five columns.
        Appended to infra.yaml under `generic_tables`.
 
-       Another dataset, or done?
+       Next, you probably want to:
+         - Upload a sample file to verify ingestion → run /DAC-upload
+           (you'll need the data-activation-client slug).
+         - Query the table once data lands → run /query-datasets
+           (scaffolds a local PostgREST + React explorer).
+
+       Another dataset here, or done?
 ```
 
 ## Regulated path (user says don't read the file)
@@ -140,6 +146,9 @@ AGENT: [list — no collision]
 - **Always flag the locked-at-creation rule** before asking "Proceed?".
 - **Always state composite semantics** when more than one column has
   `is_unique: true`.
+- **Hand off, don't sprawl.** This skill ends at "table created".
+  Upload and query are separate skills (`/DAC-upload`, `/query-datasets`)
+  — invoke them by name, don't run them inline.
 - **No cross-selling.** This skill creates one dataset per invocation —
   don't append a "what's next? (data source / tool / ...)" menu. That
   belongs to `guided`. Ask only "another dataset, or done?".

@@ -39,7 +39,10 @@ flowchart LR
 
     subgraph qd ["/query-datasets"]
         direction TB
-        start3([user invokes]) --> elicit2[PostgREST url · schema<br/>· JWT <b>secret</b> · table]
+        start3([user invokes]) --> mode{mode?<br/>chat · scaffold}
+        mode -->|"(a) chat<br/>data OK to see"| chat[curl to PostgREST<br/>via chmod 600 header tempfile<br/>trap rm on EXIT/INT/TERM]
+        chat --> render[Markdown table in chat<br/>cap 50 rows<br/>JWT never echoed]
+        mode -->|"(b) scaffold<br/>regulated or iterative"| elicit2[PostgREST url · schema<br/>· JWT <b>secret</b> · table]
         elicit2 --> scaffold[Scaffold ./&lt;table&gt;-explorer/<br/>.gitignore first<br/>.env.local chmod 600<br/>Vite + React single-file app]
         scaffold --> handoff[/npm install && npm run dev<br/>filter input → PostgREST<br/>results table/]
     end
@@ -50,7 +53,7 @@ flowchart LR
     classDef entry fill:#eef,stroke:#338,stroke-width:2px
     classDef secret fill:#fee,stroke:#c33,stroke-width:1px
     class start1,start2,start3 entry
-    class script,put,elicit2,scaffold secret
+    class script,put,chat,elicit2,scaffold secret
 ```
 
 Dashed arrows = the user decides whether to chain. Red-bordered
@@ -119,13 +122,23 @@ See [`skills/DAC-upload/SKILL.md`](./skills/DAC-upload/SKILL.md).
 
 ### `query-datasets` — `/platform-setup:query-datasets`
 
-Scaffolds a throwaway Vite + React app at `./<table>-explorer/` in the
-user's cwd for querying a PostgREST endpoint. Single-file UI: filter
-input (free-form PostgREST syntax) + results table. JWT lives in
-`.env.local` (chmod 600, gitignored) — never in source, never echoed.
+Query a PostgREST-fronted datalake, with **two modes** picked at
+invocation:
 
-Purpose: row-level verification after data activation, or ad-hoc
-querying. Not a BI tool.
+- **(a) Chat mode** — skill runs one `curl` against PostgREST and
+  renders the result as a markdown table directly in the conversation.
+  Good for spot-checks of dummy / shareable data. Picking this mode is
+  an implicit compliance opt-in: "these rows are OK for the model to
+  see." JWT goes into a chmod-600 header tempfile under `/tmp/`,
+  consumed by `curl -H @file`, `rm`'d via `trap` on any exit.
+- **(b) Scaffold mode** — writes a throwaway Vite + React app at
+  `./<table>-explorer/` in the user's cwd. Single-file UI: filter
+  input + results table. JWT lives in `.env.local` (chmod 600,
+  gitignored), never in source. Pick this for regulated data, or
+  when iterative poking is the point.
+
+Purpose either way: row-level verification after data activation, or
+ad-hoc querying. Not a BI tool.
 
 See [`skills/query-datasets/SKILL.md`](./skills/query-datasets/SKILL.md).
 

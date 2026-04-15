@@ -1,9 +1,85 @@
 # Reference transcript
 
+## Chat mode (a) — quick query, render in chat
+
+```
+USER: /query-datasets — show me 5 patients from last month
+
+AGENT: Two modes:
+
+         (a) Chat — I run one query and show results here as a
+             markdown table. Picking this confirms the data is OK for
+             me to see (so: dummy or shareable data, not PHI / BAA).
+         (b) Scaffold — I write a local Vite + React app at
+             ./<table>-explorer/. You run it, rows stay on your
+             machine. Pick this for regulated data or iterative
+             poking.
+
+       Which?
+
+USER: (a) — it's synthetic test data
+
+AGENT: I need:
+         1. PostgREST base URL
+         2. Schema name (Accept-Profile)
+         3. JWT (secret — silent on receive)
+         4. Table name
+         5. Filter (PostgREST syntax, or blank for limit=20)
+
+USER: url=https://api.prime-health.example, schema=unregulated,
+      jwt=eyJhbGciOi..., table=patients,
+      filter=created_at=gte.2026-03-15&limit=5&order=created_at.desc
+
+AGENT: [silent — no JWT echo]
+       [mktemp /tmp/pgrst-hdr.XXXX, chmod 600, trap rm on EXIT/INT/TERM]
+       [curl --fail --silent -H @<tempfile> "<url>/patients?<filter>"]
+
+       **`patients`** · `https://api.prime-health.example` · schema
+       `unregulated` · filter `created_at=gte.2026-03-15&limit=5&order=created_at.desc`
+
+       | id | first_name | last_name | dob | created_at |
+       |---|---|---|---|---|
+       | 9f2c… | Sarah | Chen | 1988-03-14 | 2026-04-12T09:14:03Z |
+       | 1ab7… | Miguel | Alvarez | 1974-11-02 | 2026-04-10T15:40:11Z |
+       | 3d8e… | — | Johnson | 1991-07-22 | 2026-04-08T12:01:58Z |
+       | 77ab… | Priya | Patel | 1983-01-30 | 2026-04-05T08:22:44Z |
+       | cc91… | — | — | — | 2026-03-20T19:05:00Z |
+
+       5 rows.
+
+       Another filter (give me the string), switch to scaffold mode
+       for a local app, or done?
+
+USER: done
+
+AGENT: [trap fires — /tmp/pgrst-hdr.XXXX removed]
+       Cleaned up the JWT tempfile. Done.
+```
+
+## Chat mode — 401
+
+```
+USER: (a) same url/schema/table, jwt=eyJhbGciOi...<expired>,
+      filter=limit=5
+
+AGENT: [curl → exit 22]
+       curl: (22) The requested URL returned error: 401
+       {"message":"JWT expired","code":"PGRST301"}
+
+       Token's expired. Give me a fresh JWT and I'll retry (same URL,
+       schema, table, filter).
+```
+
+## Scaffold mode (b) — local explorer
+
 ```
 USER: /query-datasets
 
-AGENT: I need four things to scaffold the explorer:
+AGENT: Two modes: (a) chat, (b) scaffold. Which?
+
+USER: (b) — it's real PHI
+
+AGENT: I need four things:
          1. PostgREST base URL (no trailing slash).
          2. Schema name (sent as Accept-Profile header).
          3. JWT for Bearer auth (secret — goes to .env.local,
@@ -76,11 +152,18 @@ conversation.
 ## Notes on style
 
 - **Silent on the JWT.** Never prefix-echo it ("got the JWT starting
-  with eyJ..."). Acknowledge in the abstract, write, move on.
-- **`.gitignore` before `.env.local`.** Write order matters.
-- **Don't run `npm install`.** Scaffold + instructions. Stop.
+  with eyJ..."). Acknowledge in the abstract, write / use, move on.
+- **Mode first, fields second.** The (a)/(b) question gates everything
+  else. Don't start eliciting URLs before you know which mode.
+- **`.gitignore` before `.env.local`** (scaffold mode). Write order
+  matters.
+- **Tempfile trap** (chat mode). `trap 'rm -f "$HDR"' EXIT INT TERM`
+  — not a trailing `rm`. Must survive Ctrl-C.
+- **Don't run `npm install`** (scaffold mode). Stop at "here's the
+  run command".
 - **Don't try to guess the schema.** If the user's not sure, tell them
   it's usually `public` or matches a named schema from their datalake
   setup.
-- **One table per explorer.** Re-run for more tables. Different
-  directories. Simple.
+- **Cap chat output at 50 rows.** Say "showing first 50 of N" if
+  truncated.
+- **One table, one invocation.** Re-run the skill for more tables.

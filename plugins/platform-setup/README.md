@@ -31,7 +31,8 @@ flowchart LR
 
     subgraph dac ["/DAC-upload"]
         direction TB
-        start2([user invokes]) --> elicit1[datalake slug · DAC slug<br/>· file path · optional tenant]
+        start2([user invokes]) --> resolve[alvera <b>datalakes list</b><br/>longest-prefix match<br/>against any slug blob<br/>DAC isn't listable]
+        resolve --> elicit1[confirm datalake + DAC<br/>· file path · optional tenant]
         elicit1 --> link[alvera <b>datalakes</b><br/>upload-link &lt;datalake&gt;<br/>→ presigned url + key]
         link --> put[curl -X PUT<br/>Content-Type must match<br/>--upload-file → presigned url]
         put --> ingest[alvera <b>data-activation-clients</b><br/>ingest-file &lt;dac&gt; &lt;key&gt;<br/>→ batch_id · jobs_count]

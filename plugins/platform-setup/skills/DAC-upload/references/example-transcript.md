@@ -1,5 +1,52 @@
 # Reference transcript
 
+## Ambiguous slug blob — auto-resolve against `datalakes list`
+
+```
+USER: /DAC-upload prime-medical-datalake-alvera-custom-alvera-reviews-dataactivationclient ./reviews.csv
+
+AGENT: [runs: alvera --profile default datalakes list]
+       → [
+           {"slug":"prime-medical-datalake", ...},
+           {"slug":"prime-clinical", ...}
+         ]
+
+       [prefix-match against the blob with `-` boundaries]
+       → longest match: `prime-medical-datalake`
+       → remainder after strip: `alvera-custom-alvera-reviews-dataactivationclient`
+
+       Reading your argument as:
+         - datalake: prime-medical-datalake  (matches one of your tenant's datalakes)
+         - DAC: alvera-custom-alvera-reviews-dataactivationclient
+           (tentative — no public API to validate; the ingest-file
+            call will tell us if it's wrong)
+         - file: ./reviews.csv
+
+       Correct? Also, optional: a tenant slug if your profile doesn't
+       default to the right one.
+
+USER: yes, tenant is default
+
+AGENT: [stat ./reviews.csv → 12431 lines, 2.1 MiB]
+       [extension .csv → content-type text/csv]
+
+       Uploading:
+         - file: ./reviews.csv (12,431 lines, 2.1 MiB)
+         - content type: text/csv
+         - datalake: prime-medical-datalake
+         - DAC: alvera-custom-alvera-reviews-dataactivationclient
+         - tenant: default (from profile)
+
+       Proceed? (y/n)
+
+USER: y
+
+AGENT: [three-step upload — see other transcript below for the detail]
+       Uploaded and queued. batch_id: ...
+```
+
+## Explicit inputs (no blob)
+
 ```
 USER: /DAC-upload
 

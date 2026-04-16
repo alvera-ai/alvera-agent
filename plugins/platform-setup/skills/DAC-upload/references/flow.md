@@ -1,7 +1,31 @@
 # Upload flow
 
-Three steps, in order. Each step has a non-retryable failure mode —
-surface the error to the user and stop, don't paper over.
+Three upload steps, preceded by a mandatory pre-step to auto-resolve
+the datalake slug. Each step has a non-retryable failure mode —
+surface the error and stop, don't paper over.
+
+## Step 0 — resolve the datalake slug (not DAC — DAC isn't listable)
+
+```bash
+alvera --profile <p> datalakes list [tenant]
+```
+
+Use the returned slugs to disambiguate whatever the user passed:
+
+- **Exact match** → use it.
+- **Ambiguous blob** (e.g.
+  `prime-medical-datalake-alvera-custom-alvera-reviews-dataactivationclient`)
+  → find the **longest** datalake slug that is a prefix of the blob
+  with a `-` boundary; the remainder is the candidate DAC slug. Show
+  the proposed split to the user and confirm.
+- **No blob, nothing supplied** → list the datalakes, present them
+  (numbered if more than one), let the user pick.
+
+The DAC side has no equivalent — `data-activation-clients` exposes
+only runtime endpoints on the public API (`ingest`, `ingest-file`),
+no `list` / `get`. Accept whatever DAC slug the user provides (or the
+remainder after stripping the datalake prefix) and let the
+`ingest-file` call in step 3 be the validator.
 
 ## Step 1 — request a presigned URL (datalake-scoped)
 

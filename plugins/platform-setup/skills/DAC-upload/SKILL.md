@@ -44,19 +44,52 @@ slugs.
 
 ## Workflow
 
-1. **Elicit the four inputs in one prompt:**
+1. **Resolve the datalake slug automatically, don't elicit it blind.**
+   Before asking the user anything, run:
 
-   > "I need four things to upload:
-   >   1. The **datalake slug** (e.g. `prime-medical-datalake`) — used
-   >      to provision the presigned upload URL.
-   >   2. The **DAC slug** (e.g. `acme-emr-dac`) — used to trigger
-   >      ingestion of the uploaded file.
-   >   3. The **file path** to upload (CSV or NDJSON only).
-   >   4. Optional: a **tenant slug** if your profile doesn't default
-   >      to the right one.
-   > What are they?"
+   ```bash
+   alvera --profile <p> datalakes list [tenant]
+   ```
 
-2. **Validate locally, before any API call:**
+   Use the returned slug list to disambiguate any slug blob the user
+   supplied. Three cases:
+
+   - **User supplied a clearly single slug** that matches one of the
+     returned datalakes exactly → that's the datalake. Move on.
+   - **User supplied an ambiguous blob** like
+     `prime-medical-datalake-alvera-custom-alvera-reviews-dataactivationclient`
+     → find the **longest datalake slug that is a prefix** of the
+     blob, with a `-` boundary. Treat the remainder as the DAC slug
+     candidate. Confirm back to the user: *"I'm reading this as
+     datalake `prime-medical-datalake` + DAC
+     `alvera-custom-alvera-reviews-dataactivationclient`. Correct?"*
+     If they say no, ask them to split explicitly.
+   - **User invoked the skill with no arguments** → list datalakes,
+     present them as options if more than one, pick the one on `1`,
+     then elicit the DAC slug + file + optional tenant.
+
+   Since DAC CRUD isn't exposed on the public API, we can't
+   cross-check the DAC slug the same way. Accept whatever the blob
+   implies (or the user provides) and let the `ingest-file` call in
+   step 3 be the authoritative validator.
+
+2. **Elicit remaining fields in a single prompt** — whatever step 1
+   didn't resolve:
+
+   > "I've got:
+   >   - datalake: `prime-medical-datalake` (resolved from your input)
+   >   - DAC: `alvera-custom-alvera-reviews-dataactivationclient`
+   >     (tentative — no API to validate)
+   >
+   > Still need:
+   >   - **File path** (CSV, NDJSON, or JSONL).
+   >   - Optional: **tenant slug** if your profile doesn't default to
+   >     the right one."
+
+   If the user already passed the file and tenant, skip the prompt
+   and go straight to confirmation.
+
+3. **Validate locally, before any API call:**
    - File exists, readable.
    - Extension is `.csv`, `.ndjson`, or `.jsonl`. Otherwise stop —
      even if the content is valid, the API enforces the enum.
@@ -66,7 +99,7 @@ slugs.
      - `.csv` → `text/csv`
      - `.ndjson`, `.jsonl` → `application/x-ndjson`
 
-3. **Confirm before calling the API.** Plain-language recap, single
+4. **Confirm before calling the API.** Plain-language recap, single
    bullet list:
 
    > "Uploading:
@@ -78,11 +111,11 @@ slugs.
    >
    > Proceed? (y/n)"
 
-4. **Run the three-step upload** — see `references/flow.md` for the
+5. **Run the three-step upload** — see `references/flow.md` for the
    full scripted version (including error paths and the `curl` PUT
    handling).
 
-5. **Report the outcome.** On success:
+6. **Report the outcome.** On success:
 
    > "Uploaded and queued.
    >   - key: `api-ingest/.../uploads/1a2b3c4d.ndjson`
@@ -100,10 +133,21 @@ slugs.
 
 ## Hard constraints
 
+- **Auto-list datalakes before asking.** Run `alvera datalakes list
+  [tenant]` at the start of the flow and use the result to
+  disambiguate any slug blob the user supplied. Don't ask the user to
+  manually split `prime-medical-datalake-alvera-custom-...` when the
+  datalake list would have shown `prime-medical-datalake` immediately.
+- **Don't try to list DACs.** The public API exposes no `list` /
+  `get` for `data-activation-clients` (runtime only: `ingest`,
+  `ingest-file`). Accept the DAC slug the user gives you (or the
+  leftover after stripping the datalake prefix), and let
+  `ingest-file` in step 5 be the validator. A 404 there → re-ask the
+  DAC slug.
 - **Content type must match.** The presigned PUT URL is signed with
   the content-type from the `upload-link` call. If the `curl` PUT
   sends a different `Content-Type` header, S3 / R2 rejects with 403.
-  Use the mapped mime from step 2, verbatim, in both places.
+  Use the mapped mime from step 3, verbatim, in both places.
 - **Don't stream through the model.** The file goes from the user's
   disk directly to the presigned URL via `curl`. Do not `Read` the
   file into the conversation — it may contain data the user has not

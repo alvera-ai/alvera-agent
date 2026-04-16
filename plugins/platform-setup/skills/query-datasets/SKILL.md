@@ -12,8 +12,8 @@ description: >
   etc. Independently invokable. Elicits PostgREST base URL, schema
   (Accept-Profile), JWT (secret — never echoed, never persisted beyond
   `.env.local` in scaffold mode and a chmod 600 tempfile in chat mode), and
-  table name. After scaffolding, asks whether to start the dev server (runs
-  `npm install` + `npm run dev` only on explicit yes). Never auto-opens a
+  table name. After scaffolding, runs `npm install` + `npm run dev` in the
+  background and hands the user the URL Vite prints. Never auto-opens a
   browser.
 ---
 
@@ -146,36 +146,42 @@ wrong, the app will surface the PostgREST error verbatim on Run.
     so if the user runs `git add` mid-scaffold the JWT doesn't get
     staged. `chmod 600 .env.local` immediately after write.
 
-6b. **Tell the user how to run it, and offer to start it.** Do not run
-    `npm install` unprompted — the user may use `pnpm` / `yarn` / `bun`,
-    and their toolchain (asdf / nvm / rtx) is theirs. But do *ask*
-    whether they want you to start it for them.
+6b. **Install and start the dev server.** Be proactive — the user
+    invoked scaffold mode to get a running explorer, not a folder of
+    files to read a `npm install` command out of. From inside the
+    scaffold directory:
 
-    > "Generated ./patients-explorer/. To run it yourself:
+    ```bash
+    npm install           # foreground, fails fast if registry is unreachable
+    npm run dev           # background (Bash tool: run_in_background: true)
+    ```
+
+    Then tail the dev server's stdout until Vite prints its "Local:"
+    line (usually within 1–2 seconds), capture that URL, and surface
+    it. If the user already said they use `pnpm` / `yarn` / `bun`,
+    use that instead — default to `npm` if they haven't specified.
+
+    Announce:
+
+    > "Scaffolded and started ./patients-explorer/ —
+    > **http://localhost:5173** (or whatever Vite picked).
     >
-    >   cd patients-explorer && npm install && npm run dev
-    >
-    > Open the URL Vite prints. Type PostgREST filter syntax into the
-    > input and hit Run. Examples:
+    > Open it in a browser. Filter syntax examples:
     >   - `limit=20` — first 20 rows
     >   - `first_name=eq.John&limit=20` — exact match
     >   - `dob=gte.1990-01-01&order=dob.desc` — range + order
     >
-    > PostgREST reference:
-    > https://postgrest.org/en/stable/references/api/tables_views.html
+    > Dev server is running in the background — say `stop` to kill
+    > it, or just leave it.
     >
-    > JWT is in `.env.local` — gitignored, do not commit. Rotate if it
-    > leaks.
-    >
-    > **Want me to start the app for you?** I'd run `npm install` (npm,
-    > since you didn't say otherwise) and `npm run dev` in the
-    > background and hand you the URL. Or: another explorer, or done?"
+    > JWT is in `.env.local` — gitignored, do not commit. Rotate if
+    > it leaks. Another explorer, or done?"
 
-    If the user says yes, run `npm install` then `npm run dev` as a
-    background process from inside the scaffold dir, wait for Vite's
-    "Local: http://…" line, and surface that URL. If they name a
-    different package manager (pnpm/yarn/bun), use it. Don't auto-open
-    a browser — just hand them the URL.
+    If `npm install` fails (no registry access, permission issue,
+    lockfile corruption), surface the stderr and stop. Do not
+    auto-retry. Do not silently fall back to a different package
+    manager. The user fixes the environment, re-runs manually:
+    `cd <dir> && npm install && npm run dev`.
 
 ## Hard constraints
 
@@ -189,11 +195,18 @@ wrong, the app will surface the PostgREST error verbatim on Run.
     history.
 - **`.gitignore` before `.env.local`** (scaffold mode). Write order
   matters.
-- **Never run `npm install` unprompted** (scaffold mode). Scaffold,
-  print the run command, then *ask* whether to start it. Run install +
-  dev server only on explicit yes.
-- **Don't auto-open a browser** (scaffold mode). Even when starting the
-  dev server on the user's behalf, just hand them the URL Vite prints.
+- **Run the dev server after scaffolding** (scaffold mode). The skill
+  runs `npm install` in the foreground and `npm run dev` in the
+  background, then surfaces the `Local: http://…` URL Vite prints.
+  The user invoked scaffold mode to get a running explorer, not to
+  manually type three commands. Do not ask permission first. Respect
+  a non-default package manager only if the user mentioned one
+  (`pnpm` / `yarn` / `bun`); otherwise default to `npm`.
+- **Don't auto-open a browser** (scaffold mode). Surface the URL; the
+  user opens it.
+- **Don't silently paper over a failed `npm install`.** Surface the
+  stderr, stop, and hand the user the manual command to retry. No
+  auto-fallback to a different package manager, no retries.
 - **Chat mode is a compliance opt-in.** If the user picked (a), results
   can legitimately appear in chat. If they hesitate ("maybe?") re-ask
   — don't default to rendering regulated rows just because elicitation

@@ -115,21 +115,24 @@ AGENT: [mkdir patients-explorer]
        [write package.json, vite.config.js, index.html, README.md,
         src/main.jsx, src/App.jsx]
 
-       Generated ./patients-explorer/. Run:
+       [cd patients-explorer && npm install]
+       → added 142 packages in 8s
 
-         cd patients-explorer && npm install && npm run dev
+       [npm run dev  (background)]
+       → VITE v5.4.0  ready in 187 ms
+         Local:   http://localhost:5173/
 
-       Open the URL Vite prints. Type PostgREST filter syntax into the
-       input and hit Run. Examples:
+       Scaffolded and started ./patients-explorer/ —
+       **http://localhost:5173**
+
+       Open it in a browser. Filter examples:
          limit=20
          first_name=eq.John&limit=20
          dob=gte.1990-01-01&order=dob.desc
 
-       PostgREST reference:
-       https://postgrest.org/en/stable/references/api/tables_views.html
-
-       JWT is in .env.local — gitignored, do not commit. Rotate if it
-       leaks. Another explorer, or done?
+       Dev server is running in the background — say `stop` to kill
+       it, or just leave it. JWT is in .env.local (gitignored). Another
+       explorer, or done?
 ```
 
 ## Natural-language filter translation (on request)
@@ -159,8 +162,10 @@ conversation.
   matters.
 - **Tempfile trap** (chat mode). `trap 'rm -f "$HDR"' EXIT INT TERM`
   — not a trailing `rm`. Must survive Ctrl-C.
-- **Don't run `npm install`** (scaffold mode). Stop at "here's the
-  run command".
+- **Run the dev server after scaffolding** (scaffold mode). Be
+  proactive: `npm install` (foreground), `npm run dev` (background),
+  capture Vite's `Local:` URL, hand it over. Don't dump a shell
+  command and stop.
 - **Don't try to guess the schema.** If the user's not sure, tell them
   it's usually `public` or matches a named schema from their datalake
   setup.

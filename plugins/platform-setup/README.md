@@ -44,7 +44,7 @@ flowchart LR
         chat --> render[Markdown table in chat<br/>cap 50 rows<br/>JWT never echoed]
         mode -->|"(b) scaffold<br/>regulated or iterative"| elicit2[PostgREST url · schema<br/>· JWT <b>secret</b> · table]
         elicit2 --> scaffold[Scaffold ./&lt;table&gt;-explorer/<br/>.gitignore first<br/>.env.local chmod 600<br/>Vite + React single-file app]
-        scaffold --> handoff[/npm install && npm run dev<br/>filter input → PostgREST<br/>results table/]
+        scaffold --> handoff[/skill runs npm install + npm run dev<br/>→ hands back Vite's Local: URL<br/>filter input → PostgREST/]
     end
 
     create -. optional next .-> start2
@@ -133,10 +133,12 @@ invocation:
   see." JWT goes into a chmod-600 header tempfile under `/tmp/`,
   consumed by `curl -H @file`, `rm`'d via `trap` on any exit.
 - **(b) Scaffold mode** — writes a throwaway Vite + React app at
-  `./<table>-explorer/` in the user's cwd. Single-file UI: filter
-  input + results table. JWT lives in `.env.local` (chmod 600,
-  gitignored), never in source. Pick this for regulated data, or
-  when iterative poking is the point.
+  `./<table>-explorer/` in the user's cwd, runs `npm install`, and
+  starts `npm run dev` in the background — hands the user Vite's
+  `Local:` URL. Single-file UI: filter input + results table. JWT
+  lives in `.env.local` (chmod 600, gitignored), never in source.
+  Pick this for regulated data, or when iterative poking is the
+  point.
 
 Purpose either way: row-level verification after data activation, or
 ad-hoc querying. Not a BI tool.

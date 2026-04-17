@@ -25,6 +25,9 @@ AGENT: [reads patients.csv, profiles first 1000 of 1234 rows]
          - first_name (string, required, redact_only) — "Patient's first name"
          - last_name  (string, required, redact_only) — "Patient's last name"
          - dob        (date,   required, redact_only) — "Date of birth"
+           ⚠ Source format: **MM/DD/YY** — stored as YYYY-MM-DD.
+           `/DAC-upload` will auto-convert in the interop template.
+         - gender     (string, required, none) — "Patient gender"
          - mrn        (string, required, unique, tokenize) — "Medical record number"
          - email      (string, optional, redact_only) — "Contact email"
 
@@ -34,6 +37,9 @@ AGENT: [reads patients.csv, profiles first 1000 of 1234 rows]
          - Only `mrn` is unique → single-column key. No composite.
          - Original headers "First Name"/"Last Name" normalised to
            snake_case.
+         - `dob` has dates in MM/DD/YY format — the interop template
+           created by `/DAC-upload` will handle the conversion to
+           YYYY-MM-DD automatically.
 
        Proceed? (y/n)  — or "show the full body" for JSON.
 
@@ -48,13 +54,16 @@ AGENT: [runs: alvera --profile default generic-tables list prime-health]
        [rm /tmp/gt-1718000000.json]
 
        Created generic table **patients** (id: 7f3a-...).
-       `privacy_requirement` is now locked on all five columns.
+       `privacy_requirement` is now locked on all columns.
        Appended to infra.yaml under `generic_tables`.
 
        Next, you probably want to:
-         - Upload a sample file to verify ingestion → run /DAC-upload
-           (you'll need the data-activation-client slug).
-         - Query the table once data lands → run /query-datasets
+         - **Upload the sample file** → run `/DAC-upload`. It will
+           auto-create an interop contract with a Liquid template
+           mapping your columns to the patient schema. Heads up:
+           `dob` has dates in MM/DD/YY format — the template will
+           auto-convert to YYYY-MM-DD.
+         - **Query the table** once data lands → run `/query-datasets`
            (scaffolds a local PostgREST + React explorer).
 
        Another dataset here, or done?
@@ -136,6 +145,9 @@ AGENT: [list — no collision]
 
        Created generic table **claims_2024** (id: 9b2e-...).
        Appended to infra.yaml.
+
+       Next: run `/DAC-upload` to ingest the file. It will auto-create
+       the interop contract and handle any format conversions.
        Another dataset, or done?
 ```
 

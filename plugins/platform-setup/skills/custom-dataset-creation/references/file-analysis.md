@@ -57,6 +57,7 @@ Per column, derive:
 | `min_length`      | Shortest non-null string                                       |
 | `max_length`      | Longest non-null string                                        |
 | `looks_sensitive` | Regex on name: `email\|phone\|ssn\|dob\|birth\|address\|name\|zip\|postal` |
+| `detected_date_format` | If values match a date pattern (ISO or not), report the format. `null` if not a date. |
 
 ### Type inference (in order — first match wins)
 
@@ -69,7 +70,34 @@ fall back to `string`.
 4. All parse as ISO-8601 date (`YYYY-MM-DD`) → `date`
 5. All parse as ISO-8601 datetime → `datetime`
 6. All match `HH:MM(:SS)?` → `time`
-7. Otherwise → `string`
+7. All match a **non-ISO date pattern** (MM/DD/YY, MM/DD/YYYY,
+   M/D/YY, DD-Mon-YYYY, MM-DD-YYYY) → `date`, with
+   `detected_date_format` set to the pattern. The generic table
+   stores ISO dates; the interop template handles conversion.
+8. Otherwise → `string`
+
+### Non-ISO date detection
+
+The profiler recognises these source formats and still classifies
+the column as `date` (not `string`):
+
+| Source pattern | `detected_date_format` | Needs interop fix |
+|---------------|----------------------|-------------------|
+| `YYYY-MM-DD` | `YYYY-MM-DD` | No — already ISO |
+| `MM/DD/YYYY` | `MM/DD/YYYY` | Yes |
+| `MM/DD/YY` | `MM/DD/YY` | Yes (ambiguous century) |
+| `M/D/YY` | `M/D/YY` | Yes (no zero-padding) |
+| `DD-Mon-YYYY` | `DD-Mon-YYYY` | Yes |
+| `MM-DD-YYYY` | `MM-DD-YYYY` | Yes |
+
+When a non-ISO format is detected, the column proposal flags it:
+*"`dob` looks like dates in MM/DD/YY format. Column type → `date`
+(the generic table stores YYYY-MM-DD). The interop template created
+by `/DAC-upload` will auto-convert."*
+
+This bridges the gap between custom-dataset-creation (schema) and
+DAC-upload (ingestion template). The user knows at schema time that
+their source data will need transformation.
 
 `is_array: true` is only applicable to NDJSON where the column value is
 a JSON array. CSV cannot represent arrays natively — don't propose it
@@ -139,10 +167,26 @@ downstream column proposal step is format-agnostic):
       "min_length": 1,
       "max_length": 64,
       "looks_sensitive": true
+    },
+    {
+      "original_name": "DOB",
+      "suggested_name": "dob",
+      "inferred_type": "date",
+      "null_rate": 0.0,
+      "cardinality": "high",
+      "min_length": 8,
+      "max_length": 10,
+      "looks_sensitive": true,
+      "detected_date_format": "MM/DD/YY",
+      "needs_interop_conversion": true
     }
   ]
 }
 ```
+
+When `needs_interop_conversion` is `true`, the column proposal step
+flags it and the hand-off to `/DAC-upload` mentions it — so the
+user knows at schema time that the source format differs from ISO.
 
 ### Script template
 
@@ -165,6 +209,16 @@ CLOCK = re.compile(r"^\d{1,2}:\d{2}(:\d{2})?$")
 BOOL = {"true","false","yes","no","0","1"}
 SENSITIVE = re.compile(r"email|phone|ssn|dob|birth|address|name|zip|postal", re.I)
 
+# Non-ISO date patterns (checked after ISO fails, so we still classify as date)
+DATE_PATTERNS = [
+    (re.compile(r"^\d{1,2}/\d{1,2}/\d{2}$"), "M/D/YY"),
+    (re.compile(r"^\d{1,2}/\d{1,2}/\d{4}$"), "M/D/YYYY"),
+    (re.compile(r"^\d{2}/\d{2}/\d{2}$"), "MM/DD/YY"),
+    (re.compile(r"^\d{2}/\d{2}/\d{4}$"), "MM/DD/YYYY"),
+    (re.compile(r"^\d{2}-\d{2}-\d{4}$"), "MM-DD-YYYY"),
+    (re.compile(r"^\d{2}-[A-Za-z]{3}-\d{4}$"), "DD-Mon-YYYY"),
+]
+
 def norm(s):
     low = s.lower()
     if re.fullmatch(r"[a-z0-9_]+", low):
@@ -172,6 +226,23 @@ def norm(s):
     s = re.sub(r"[^a-z0-9]+", "_", low).strip("_")
     if s and s[0].isdigit(): s = "col_" + s
     return s or "col"
+
+def detect_date_format(vals):
+    """Return the dominant non-ISO date pattern, or None."""
+    counts = Counter()
+    for v in vals:
+        v = v.strip()
+        if not v: continue
+        if ISO_DATE.match(v):
+            counts["YYYY-MM-DD"] += 1
+            continue
+        for regex, label in DATE_PATTERNS:
+            if regex.match(v):
+                counts[label] += 1
+                break
+    if not counts: return None
+    dominant = counts.most_common(1)[0]
+    return dominant[0] if dominant[1] >= len(vals) * 0.5 else None
 
 def classify(vals):
     if not vals: return "string"
@@ -184,6 +255,10 @@ def classify(vals):
     if allmatch(lambda v: ISO_DATE.match(v) is not None): return "date"
     if allmatch(lambda v: ISO_DATETIME.match(v) is not None): return "datetime"
     if allmatch(lambda v: CLOCK.match(v) is not None): return "time"
+    # Non-ISO dates: still classify as "date" — the generic table stores
+    # ISO, and the interop template (created by /DAC-upload) converts.
+    fmt = detect_date_format(vals)
+    if fmt: return "date"
     return "string"
 
 def bucket(distinct, total):
@@ -244,7 +319,8 @@ def profile(path):
         non_null = [str(v) for v in raw if v is not None and v != ""]
         distinct = len(set(non_null))
         lens = [len(v) for v in non_null]
-        cols.append({
+        date_fmt = detect_date_format(non_null)
+        col = {
             "original_name": h,
             "suggested_name": norm(h),
             "inferred_type": classify(non_null),
@@ -253,7 +329,11 @@ def profile(path):
             "min_length": min(lens) if lens else 0,
             "max_length": max(lens) if lens else 0,
             "looks_sensitive": bool(SENSITIVE.search(h)),
-        })
+        }
+        if date_fmt:
+            col["detected_date_format"] = date_fmt
+            col["needs_interop_conversion"] = date_fmt != "YYYY-MM-DD"
+        cols.append(col)
     return {"format": fmt, "row_count": total, "sampled": len(rows), "columns": cols}
 
 if __name__ == "__main__":

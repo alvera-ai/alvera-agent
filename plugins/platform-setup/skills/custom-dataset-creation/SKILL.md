@@ -6,13 +6,15 @@ description: >
   (dummy vs real vs regulated), local column profiling (python stdlib only),
   plain-language column proposal (name, type, privacy_requirement,
   is_required/unique/array, description), explicit user review, then
-  `alvera generic-tables create`. Supports CSV and NDJSON sample files. Use when
-  the user says "create a generic table", "define a custom dataset", "onboard a
-  new table from this file", "add a custom table", or similar. Assumes an
-  `alvera` session and a target datalake already exist — if not, route the user
-  to the `guided` skill first. Does NOT handle data activation client CRUD,
-  interop mappings, or runtime ingest (activation-client CRUD and interop aren't
-  exposed on the public API; runtime ingest is out of scope for a setup skill).
+  `alvera generic-tables create`. Also detects data-quality anti-patterns in the
+  source file (non-ISO date formats like MM/DD/YY, capitalised enums) and flags
+  them for the downstream interop template — the generic table defines the target
+  schema (type `date` = ISO 8601), and `/DAC-upload` auto-generates the Liquid
+  template that converts source formats. Supports CSV and NDJSON sample files.
+  Use when the user says "create a generic table", "define a custom dataset",
+  "onboard a new table from this file", "add a custom table", or similar.
+  Assumes an `alvera` session and a target datalake already exist — if not,
+  route the user to the `guided` skill first.
 ---
 
 # Custom dataset creation
@@ -100,12 +102,18 @@ Output is a row appended to `infra.yaml`.
    Schema: `references/create.md`.
 
 8. **Stop. Point to the next skills.** This skill creates one dataset.
-   After a successful create, say:
+   After a successful create, include any anti-pattern findings in the
+   hand-off so `/DAC-upload` doesn't have to re-discover them:
 
    > "Done — `<table>` is created. Next, you probably want to:
    >
-   >   - **Upload a sample file** to verify ingestion works → run
-   >     `/DAC-upload` (needs the data-activation-client slug).
+   >   - **Upload a sample file** → run `/DAC-upload`. It will
+   >     auto-create an interop contract with a Liquid template that
+   >     maps your source columns to the table schema.
+   >     [if anti-patterns were detected:]
+   >     Heads up: the profiler found dates in MM/DD/YY format (`dob`)
+   >     and capitalised gender values — `/DAC-upload` will handle the
+   >     conversion in the template automatically.
    >   - **Query the table** once data has landed → run
    >     `/query-datasets` (scaffolds a local PostgREST + React
    >     explorer).
@@ -152,7 +160,10 @@ immediately.
 
 Downstream skills (invoked separately by the user):
 
-- `DAC-upload` — push a sample file through a data-activation-client via
-  `upload-link` + `ingest-file`
+- `DAC-upload` — end-to-end ingestion pipeline: auto-creates the interop
+  contract (with Liquid template mapping source columns → FHIR fields),
+  detects and fixes data-quality anti-patterns (date formats, gender
+  normalisation), sandbox-tests before upload, then pushes via presigned
+  URL + `ingest-file`
 - `query-datasets` — scaffold a local Vite + React explorer hitting
   PostgREST, for row-level verification

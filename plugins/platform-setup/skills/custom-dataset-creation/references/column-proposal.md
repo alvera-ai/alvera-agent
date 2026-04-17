@@ -56,6 +56,23 @@ Fields and where they come from:
   If the user supplies something else, pass it through — API will
   reject and we re-elicit.
 
+### Date columns with non-ISO source formats
+
+When the profiler detects `detected_date_format` on a column (e.g.
+`MM/DD/YY`), the type is still `date` — the generic table stores
+ISO 8601 dates. The conversion happens in the interop template,
+which `/DAC-upload` auto-generates.
+
+Flag this at proposal time:
+
+> "`dob` — dates detected in **MM/DD/YY** format. Column type → `date`
+> (stored as YYYY-MM-DD). `/DAC-upload` will auto-generate the Liquid
+> template to convert."
+
+This prevents the user from seeing `type: date` and thinking their
+MM/DD/YY values will work as-is. The generic table defines the
+**target** schema; the interop template maps the **source** format.
+
 ### `privacy_requirement` — LOCKED AT CREATION
 
 - Enum: `none | tokenize | redact_only`.

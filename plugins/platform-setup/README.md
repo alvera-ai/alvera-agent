@@ -5,13 +5,18 @@ resources via [`@alvera-ai/platform-sdk`](https://www.npmjs.com/package/@alvera-
 
 ## Skills
 
-Four skills. `guided` handles the general resource loop; the other
-three form a focused chain for onboarding a new dataset end-to-end —
-each is also independently invokable.
+Five skills. `guided` handles the general resource loop. Three form a
+dataset onboarding chain. One handles workflow automation — each is
+independently invokable.
 
 ```
-/custom-dataset-creation  →  /DAC-upload  →  /query-datasets
-    (define schema)         (push a file)    (verify rows land)
+Dataset chain:
+  /custom-dataset-creation  →  /DAC-upload  →  /query-datasets
+      (define schema)         (push + template)  (verify rows)
+
+Workflow automation:
+  /agentic-workflow-creation
+      (build, test, validate event-driven workflows)
 ```
 
 ### Dataset-chain user flow
@@ -106,18 +111,38 @@ See [`skills/custom-dataset-creation/SKILL.md`](./skills/custom-dataset-creation
 
 ### `DAC-upload` — `/platform-setup:DAC-upload`
 
-Push a file into a data-activation-client. Three steps, **two slugs**:
+End-to-end data ingestion pipeline. Goes beyond raw file upload:
 
-1. `alvera datalakes upload-link <datalake>` → presigned PUT URL
-2. `curl -X PUT` to stream the file to object storage
-3. `alvera data-activation-clients ingest-file <dac>` → trigger processing
+- **Auto-resolves** datalake, DAC, tool, data source, interop contract
+- **Inspects** file headers and runs an anti-pattern scanner (date
+  formats, gender normalisation, status mapping)
+- **Auto-generates** Liquid interop templates when the source schema
+  doesn't match the FHIR target
+- **Sandbox-tests** one row through the pipeline before live ingest
+- **Uploads** via presigned URL + `ingest-file`
 
-Upload provisioning is datalake-scoped (the storage belongs to the
-lake); ingest is DAC-scoped (the DAC interprets the file). The user
-supplies both slugs (DAC CRUD isn't on the public API). Supports CSV
-and NDJSON only. One file per invocation.
+Supports CSV and NDJSON. One file per invocation.
 
 See [`skills/DAC-upload/SKILL.md`](./skills/DAC-upload/SKILL.md).
+
+### `agentic-workflow-creation` — `/platform-setup:agentic-workflow-creation`
+
+Build, test, and validate event-driven automation workflows:
+
+- **Production-grade templates** — Review SMS, Age-Aware Survey — with
+  customisation points (source URI, delay, dedup window, SMS body)
+- **Auto-detects** available tools, AI agents, and connected apps
+- **Custom build path** — guided elicitation for workflows that don't
+  match a template
+- **Auto dry-run** after creation — tests the full pipeline without
+  making external calls
+- **Log interpretation** — surfaces execution results in plain language
+- **Draft → live promotion** — only on explicit user confirmation
+
+Includes Liquid variable reference for all pipeline stages (filter,
+decision, action) and debugging guides for common issues.
+
+See [`skills/agentic-workflow-creation/SKILL.md`](./skills/agentic-workflow-creation/SKILL.md).
 
 ### `query-datasets` — `/platform-setup:query-datasets`
 

@@ -455,6 +455,22 @@ decision key triggers it? What tool handles it?" Build incrementally.
   full pipeline without making external calls — good for validation.
 - Append to `infra.yaml` under `agentic_workflows:`.
 
+### Hand-off for production-grade workflows
+
+For complex workflows with filters, scheduling, idempotency, runtime
+guards, connected app integration, or when the user wants a
+production-grade template (review SMS, age-aware survey), hand off to
+the `agentic-workflow-creation` skill:
+
+> "For a production-grade workflow with templates, dry-run testing,
+> and log interpretation, run `/agentic-workflow-creation` — it has
+> ready-made templates for review SMS and survey workflows."
+
+The `guided` skill handles simple workflow creation as part of a
+broader setup session. `agentic-workflow-creation` handles the full
+lifecycle: template selection, auto-testing, log interpretation, and
+promotion to live.
+
 ### Execution (post-create)
 
 Two modes:

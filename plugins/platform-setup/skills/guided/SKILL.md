@@ -58,10 +58,11 @@ password.
    can set up a data source, tool, action status updater, AI agent,
    connected app, agentic workflow, interop contract, or data
    activation client. For a custom dataset / generic table from a
-   sample file, I'll hand you off to the `custom-dataset-creation`
-   skill." Repeat the option list every time you return to the loop
-   (after each successful create or skip) — don't assume the user
-   remembers.
+   sample file → `custom-dataset-creation` skill. For a
+   production-grade workflow with templates and dry-run testing →
+   `agentic-workflow-creation` skill." Repeat the option list every
+   time you return to the loop (after each successful create or skip)
+   — don't assume the user remembers.
 4. **Per resource:**
    - **List first** to detect collisions (`alvera <resource> list ...`).
    - **Elicit fields** per `references/resources.md`. Enum lists there are

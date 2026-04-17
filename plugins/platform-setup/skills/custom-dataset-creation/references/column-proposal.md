@@ -48,10 +48,20 @@ Fields and where they come from:
 
 ### Type
 
-- Trust the profiler's `inferred_type`. When the user overrides (e.g.
-  "this looks like an int but I want to store it as string"), respect
-  it without argument — there are legitimate reasons (leading zeros on
-  zip codes, opaque IDs that look numeric).
+- Trust the profiler's `inferred_type` **except for ID-like integers**.
+  When a column's name looks like an identifier (`_id`, `_key`, `_code`,
+  `_num`, `_ref`, `mrn`, `npi`, `zip`, `ssn`, `fax`) and all values
+  parse as integers, **default to `string`** and explicitly ask:
+
+  > "`patient_id` — all values are numeric, but this looks like an
+  > identifier. Defaulting to `string` (IDs may gain prefixes or
+  > leading zeros). Want `integer` instead?"
+
+  Why: zip codes lose leading zeros as integers. MRNs and patient IDs
+  that are numeric today may gain dashes or prefixes tomorrow. Storing
+  identifiers as `string` is always safe; `integer` only makes sense
+  when arithmetic is intended (counts, quantities, ages).
+- When the user overrides any type, respect it without argument.
 - Enum values: `string | integer | float | boolean | date | datetime | time`.
   If the user supplies something else, pass it through — API will
   reject and we re-elicit.

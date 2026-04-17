@@ -58,13 +58,14 @@ Per column, derive:
 | `max_length`      | Longest non-null string                                        |
 | `looks_sensitive` | Regex on name: `email\|phone\|ssn\|dob\|birth\|address\|name\|zip\|postal` |
 | `detected_date_format` | If values match a date pattern (ISO or not), report the format. `null` if not a date. |
+| `looks_like_id` | `true` if the column name contains `id\|key\|code\|num\|ref\|mrn\|npi\|zip\|ssn\|fax` and all values parse as int. |
 
 ### Type inference (in order — first match wins)
 
 Apply to non-null values only. If there are zero non-null values,
 fall back to `string`.
 
-1. All parse as `int` → `integer`
+1. All parse as `int` → `integer` **(but see ID override below)**
 2. All parse as `float` (and at least one isn't a pure int) → `float`
 3. All match `true|false|yes|no|0|1` (case-insensitive) → `boolean`
 4. All parse as ISO-8601 date (`YYYY-MM-DD`) → `date`
@@ -75,6 +76,24 @@ fall back to `string`.
    `detected_date_format` set to the pattern. The generic table
    stores ISO dates; the interop template handles conversion.
 8. Otherwise → `string`
+
+### ID-like integer override
+
+When a column's values all parse as `int` but its name looks like an
+identifier (`id`, `key`, `code`, `num`, `ref`, `mrn`, `npi`, `zip`,
+`ssn`, `fax`), **default the proposed type to `string`** and ask:
+
+> "`patient_id` — all values are numeric, but the name suggests an
+> identifier. Storing as `string` (default) — IDs often have leading
+> zeros or shouldn't support arithmetic. Want `integer` instead?"
+
+Why: IDs that happen to be numeric today may gain prefixes, dashes,
+or leading zeros tomorrow. Storing as `string` is the safe default.
+`zip` codes and `ssn` values especially break if stored as integers
+(leading zeros are stripped).
+
+The profiler sets `looks_like_id: true` on these columns. The column
+proposal step uses this to flip the default.
 
 ### Non-ISO date detection
 
@@ -208,6 +227,7 @@ ISO_DATETIME = re.compile(r"^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z
 CLOCK = re.compile(r"^\d{1,2}:\d{2}(:\d{2})?$")
 BOOL = {"true","false","yes","no","0","1"}
 SENSITIVE = re.compile(r"email|phone|ssn|dob|birth|address|name|zip|postal", re.I)
+ID_LIKE = re.compile(r"_?id$|_key$|_code$|_num$|_ref$|^id$|^key$|^mrn$|^npi$|^zip$|^ssn$|^fax$", re.I)
 
 # Non-ISO date patterns (checked after ISO fails, so we still classify as date)
 DATE_PATTERNS = [
@@ -333,6 +353,8 @@ def profile(path):
         if date_fmt:
             col["detected_date_format"] = date_fmt
             col["needs_interop_conversion"] = date_fmt != "YYYY-MM-DD"
+        if col["inferred_type"] == "integer" and ID_LIKE.search(h):
+            col["looks_like_id"] = True
         cols.append(col)
     return {"format": fmt, "row_count": total, "sampled": len(rows), "columns": cols}
 

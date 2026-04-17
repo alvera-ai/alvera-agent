@@ -80,6 +80,21 @@ password.
      (`references/yaml-receipt.md`) — only after a successful (2xx) create.
 5. Loop until the user is done.
 
+## Stance: be proactive
+
+Assume the user wants to do the positive action. Default to the
+forward path and ask for a yes/no confirmation — don't present long
+option menus when one answer is clearly what they want. For example:
+
+- Datalake exists → "Use `prime-health`? Or create a new one?"
+  (not "what do you want to do with datalakes?")
+- Data source fields collected → "Creating **Acme EMR**. Proceed?"
+  (not "would you like to create this, or review, or skip?")
+- Auth missing → present both auth paths inline (interactive +
+  VM/token), don't interrogate what kind of terminal they have first.
+
+When the user agrees, move immediately — don't re-confirm.
+
 ## Hard constraints
 
 Read these before any user interaction:

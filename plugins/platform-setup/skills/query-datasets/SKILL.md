@@ -183,6 +183,13 @@ wrong, the app will surface the PostgREST error verbatim on Run.
     manager. The user fixes the environment, re-runs manually:
     `cd <dir> && npm install && npm run dev`.
 
+## Stance: be proactive
+
+Assume the user wants to see results. Default to the forward path and
+confirm with yes/no. In scaffold mode, install and start the dev
+server automatically — the user invoked this skill to see an explorer,
+not to type three commands.
+
 ## Hard constraints
 
 - **JWT is secret.** Silent acknowledgement on receive — never

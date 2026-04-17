@@ -36,9 +36,13 @@ Fields and where they come from:
 
 ### Name handling
 
-- Always propose `snake_case` (`first_name`, not `First Name`). If the
-  original header had spaces / caps, show both (`"First Name" →
-  first_name`) and ask the user to accept or supply an alternative.
+- **Only propose renaming when the original has spaces or mixed
+  case.** Show both and ask: *"`First Name` → `first_name` for
+  simplicity?"*. The user can accept or supply an alternative.
+- **Don't inject underscores into already-concatenated tokens.**
+  `parapptyn` stays `parapptyn` — you don't know the user's
+  abbreviation scheme and guessing word boundaries is more often
+  wrong than right. Do not produce `par_appt_yn`.
 - If the user pushes back and insists on a name with spaces or mixed
   case, pass it through to the API — the server is the validator.
 

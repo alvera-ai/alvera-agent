@@ -131,6 +131,12 @@ slugs.
    extension; presigned URL rejection → likely wrong content-type
    header).
 
+## Stance: be proactive
+
+Assume the user wants to upload. Default to the forward path and
+confirm with yes/no. When inputs are resolved and the confirmation
+is yes, move immediately — don't re-ask.
+
 ## Hard constraints
 
 - **Auto-list datalakes before asking.** Run `alvera datalakes list

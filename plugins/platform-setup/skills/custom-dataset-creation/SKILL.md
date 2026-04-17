@@ -115,6 +115,13 @@ Output is a row appended to `infra.yaml`.
    Do not run either follow-up skill automatically. They're separate
    entry points — let the user invoke them explicitly.
 
+## Stance: be proactive
+
+Assume the user wants to move forward. Default to the positive action
+and confirm with a yes/no — don't present multi-choice menus when
+one path is obviously what they want. When the user agrees, move
+immediately.
+
 ## Hard constraints
 
 - **Compliance gate is non-negotiable.** If the user picks (c), do not

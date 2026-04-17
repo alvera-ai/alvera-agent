@@ -49,12 +49,35 @@ whether the tenant has one.
   `references/resources.md` → "Datalake". Do **not** refuse outright;
   that used to be the policy, it isn't anymore.
 
-## Auth, briefly
+## Auth
 
 The `alvera` CLI handles credentials. The skill never collects the
-password and never shells out to `alvera login` itself — the user runs
-that one command in their own terminal so the password never enters
-Claude's context or process arg list.
+password and never shells out to `alvera login` itself.
+
+Two paths depending on the environment:
+
+### Interactive terminal (default)
+
+The user runs `alvera login` in their own shell — the CLI prompts for
+the password (hidden input). This is the normal path for local dev.
+
+### VM / Claude Cowork / headless (no interactive TTY)
+
+If the user is in a VM, Claude Cowork session, or any environment
+where `alvera login`'s interactive password prompt won't work, direct
+them to mint a short-lived API token via the web UI:
+
+> "Visit **`<baseUrl>/app/users/api-tokens`** in a browser, mint a
+> short-lived token, then set it in your shell:
+>
+>   export ALVERA_SESSION_TOKEN=<token>
+>
+> After that, `alvera whoami` should show your session."
+
+How to detect: check if `alvera login` fails with a TTY error, or if
+the user mentions they're in a VM / cowork / container. Don't assume —
+try `whoami` first and only suggest this path if no valid session
+exists and the user indicates they can't run `login` interactively.
 
 ## First-turn questions
 
@@ -77,20 +100,27 @@ alvera --profile <name> whoami
 
 - `hasSessionToken: true` and `expiresAt` in the future → proceed to
   connectivity check.
-- `hasSessionToken: false`, expired, or wrong tenant → tell the user to
-  run **in their own terminal**:
+- `hasSessionToken: false`, expired, or wrong tenant → offer both auth
+  paths:
 
-  ```bash
-  alvera --profile <name> login \
-    --base-url <baseUrl> \
-    --tenant <tenantSlug> \
-    --email <email>
-  ```
+  > "No active session. Two ways to authenticate:
+  >
+  > **Interactive** (local terminal):
+  >
+  >     alvera --profile <name> login \
+  >       --base-url <baseUrl> \
+  >       --tenant <tenantSlug> \
+  >       --email <email>
+  >
+  > **VM / Cowork / headless** (no password prompt):
+  >
+  >     Visit <baseUrl>/app/users/api-tokens, mint a short-lived
+  >     token, then: export ALVERA_SESSION_TOKEN=<token>
+  >
+  > Tell me when you're done."
 
-  The CLI will prompt for the password (hidden input, not echoed). Wait
-  for the user to confirm before continuing. Do **not** pass
-  `--password` on the command line — it would land in shell history and
-  in Claude's view of the command. Do not set `ALVERA_PASSWORD` either.
+  Do **not** pass `--password` on the command line — it would land in
+  shell history. Do not set `ALVERA_PASSWORD` either.
 
 ## Connectivity check
 
@@ -113,8 +143,17 @@ alvera --profile <name> datalakes list <tenantSlug>
 - **Zero datalakes** → offer to create one. Walk the user through the
   "Datalake" section of `resources.md`. Once created, pin its slug for
   the session and continue.
-- **One** → use it automatically, tell the user the slug.
-- **More than one** → ask which to operate on. Remember for the session.
+- **One or more** → list them, then ask:
+
+  > "Found N datalake(s):
+  >   1. `prime-health` — healthcare, America/New_York
+  >   (2. ...)
+  >
+  > Use one of these, or create a new one?"
+
+  Even with a single datalake, don't auto-pick — the user may want
+  to create a fresh one for a new domain or environment. Be proactive
+  (assume "use existing" is likely), but let the user override.
 
 ## State to retain for the session
 

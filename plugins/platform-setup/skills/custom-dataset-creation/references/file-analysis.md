@@ -77,14 +77,33 @@ for CSV input.
 
 ### Name normalisation
 
-- Lowercase.
-- Replace any run of non-`[a-z0-9]+` with a single `_`.
-- Strip leading / trailing `_`.
+Only transform names that **actually have separators** (spaces, hyphens,
+mixed case with word boundaries). Single-token column names that are
+already lowercase and contiguous stay as-is — don't inject underscores
+where the original had none.
+
+Rules:
+
+- **Has spaces or non-alphanumeric chars** → lowercase, replace runs
+  of non-`[a-z0-9]+` with a single `_`, strip leading / trailing `_`.
+  Propose the rename to the user: *"`First Name` → `first_name` for
+  simplicity?"*
+- **All-caps or mixed-case single token** → lowercase only. `MRN` →
+  `mrn`. `PatientDOB` → `patientdob` (don't CamelCase-split — too
+  error-prone; ask the user if they want `patient_dob` instead).
+- **Already lowercase, no spaces** → keep verbatim. `parapptyn`
+  stays `parapptyn`. Do **not** try to word-split abbreviations
+  (`par_appt_yn` etc.) — you don't know the user's abbreviation
+  scheme and guessing wrong is worse than leaving it untouched.
 - If the result collides with another column, append `_2`, `_3`, …
 - If the result starts with a digit, prefix `col_`.
 
-Examples: `First Name` → `first_name`; `Patient DOB` → `patient_dob`;
-`123 Main St` → `col_123_main_st`.
+Examples:
+  - `First Name` → ask: `first_name`?   (has a space)
+  - `Patient DOB` → ask: `patient_dob`?  (has a space)
+  - `parapptyn` → keep as `parapptyn`    (already lowercase, no spaces)
+  - `MRN` → `mrn`                        (just lowercase, single token)
+  - `123 Main St` → `col_123_main_st`    (has spaces + leading digit)
 
 ## Path (c): local profiling script
 
@@ -147,7 +166,10 @@ BOOL = {"true","false","yes","no","0","1"}
 SENSITIVE = re.compile(r"email|phone|ssn|dob|birth|address|name|zip|postal", re.I)
 
 def norm(s):
-    s = re.sub(r"[^a-z0-9]+", "_", s.lower()).strip("_")
+    low = s.lower()
+    if re.fullmatch(r"[a-z0-9_]+", low):
+        return low  # already clean — don't inject underscores
+    s = re.sub(r"[^a-z0-9]+", "_", low).strip("_")
     if s and s[0].isdigit(): s = "col_" + s
     return s or "col"
 

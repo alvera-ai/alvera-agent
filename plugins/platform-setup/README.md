@@ -40,12 +40,9 @@ flowchart LR
 
     subgraph qd ["/query-datasets"]
         direction TB
-        start3([user invokes]) --> mode{mode?<br/>chat · scaffold}
-        mode -->|"(a) chat<br/>data OK to see"| chat[curl to PostgREST<br/>via chmod 600 header tempfile<br/>trap rm on EXIT/INT/TERM]
-        chat --> render[Markdown table in chat<br/>cap 50 rows<br/>JWT never echoed]
-        mode -->|"(b) scaffold<br/>regulated or iterative"| elicit2[PostgREST url · schema<br/>· JWT <b>secret</b> · table]
-        elicit2 --> scaffold[Scaffold ./&lt;table&gt;-explorer/<br/>.gitignore first<br/>.env.local chmod 600<br/>Vite + React single-file app]
-        scaffold --> handoff[/skill runs npm install + npm run dev<br/>→ hands back Vite's Local: URL<br/>filter input → PostgREST/]
+        start3([user invokes]) --> elicit2[PostgREST url · schema<br/>· JWT <b>secret</b> · table]
+        elicit2 --> scaffold[Scaffold ./&lt;table&gt;-explorer/<br/>postgrest-js · TanStack Table · Tailwind<br/>.gitignore first · .env.local chmod 600]
+        scaffold --> run[npm install + npm run dev<br/>→ hands back Vite's Local: URL<br/>data never enters conversation]
     end
 
     create -. optional next .-> start2
@@ -54,7 +51,7 @@ flowchart LR
     classDef entry fill:#eef,stroke:#338,stroke-width:2px
     classDef secret fill:#fee,stroke:#c33,stroke-width:1px
     class start1,start2,start3 entry
-    class script,put,chat,elicit2,scaffold secret
+    class script,put,elicit2,scaffold secret
 ```
 
 Dashed arrows = the user decides whether to chain. Red-bordered
@@ -124,25 +121,19 @@ See [`skills/DAC-upload/SKILL.md`](./skills/DAC-upload/SKILL.md).
 
 ### `query-datasets` — `/platform-setup:query-datasets`
 
-Query a PostgREST-fronted datalake, with **two modes** picked at
-invocation:
+Scaffolds a local Vite + React explorer app for querying a
+PostgREST-fronted datalake. **Data never enters the conversation** —
+the app runs in the user's browser and hits PostgREST directly, so
+regulated / PHI / BAA-covered data is fine. No chat-mode queries.
 
-- **(a) Chat mode** — skill runs one `curl` against PostgREST and
-  renders the result as a markdown table directly in the conversation.
-  Good for spot-checks of dummy / shareable data. Picking this mode is
-  an implicit compliance opt-in: "these rows are OK for the model to
-  see." JWT goes into a chmod-600 header tempfile under `/tmp/`,
-  consumed by `curl -H @file`, `rm`'d via `trap` on any exit.
-- **(b) Scaffold mode** — writes a throwaway Vite + React app at
-  `./<table>-explorer/` in the user's cwd, runs `npm install`, and
-  starts `npm run dev` in the background — hands the user Vite's
-  `Local:` URL. Single-file UI: filter input + results table. JWT
-  lives in `.env.local` (chmod 600, gitignored), never in source.
-  Pick this for regulated data, or when iterative poking is the
-  point.
+Stack mirrors `sfphg-ops-hub` conventions: `@supabase/postgrest-js`
+for query building, `@tanstack/react-table` for sortable paginated
+tables, Tailwind CSS v4, `jose` for in-app JWT generation (HS256, 1h
+expiry from the user's secret). Scaffolds, runs `npm install`, starts
+`npm run dev`, and hands the user the URL.
 
-Purpose either way: row-level verification after data activation, or
-ad-hoc querying. Not a BI tool.
+Purpose: row-level verification after data activation, or ad-hoc
+querying. Not a BI tool.
 
 See [`skills/query-datasets/SKILL.md`](./skills/query-datasets/SKILL.md).
 

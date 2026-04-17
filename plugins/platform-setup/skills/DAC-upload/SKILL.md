@@ -1,185 +1,213 @@
 ---
 name: DAC-upload
 description: >
-  Push a sample file into a data-activation-client (DAC) for bulk ingestion.
-  Three-step flow: request a presigned upload URL from the **datalake**
-  (`alvera datalakes upload-link`), PUT the file to object storage, then
-  trigger processing on the **DAC** (`alvera data-activation-clients
-  ingest-file`). Upload-link is datalake-scoped (it provisions storage),
-  ingest-file is DAC-scoped (it interprets the file) — the skill needs
-  **both** slugs. Supports CSV and NDJSON — the only two content types the
-  API accepts. Use when the user says "upload a file to the DAC", "ingest a
-  sample file", "push CSV into activation client X", or similar. Assumes
-  the user already has the datalake slug + DAC slug (this skill does not
-  create either — DAC CRUD isn't on the public API; both slugs come from
-  the Alvera UI or an admin). Designed to run right after
-  `custom-dataset-creation`, but is independently invokable.
+  End-to-end data ingestion through a data-activation-client (DAC). Goes
+  beyond raw file upload: auto-resolves prerequisites (datalake, DAC,
+  interop contract), inspects file headers and sample-row patterns to
+  detect data-quality anti-patterns (MM/DD/YY dates, un-normalised gender,
+  missing identifiers), auto-generates a Liquid interop template when the
+  source schema doesn't match the FHIR target, sandbox-tests the pipeline
+  against a sample row, then executes the three-step presigned upload.
+  Designed for a hands-off experience: user provides a file and
+  (optionally) a target resource type — the skill handles the rest.
+  Supports CSV and NDJSON. Use when the user says "upload a file to the
+  DAC", "ingest data", "push CSV into activation client X", or similar.
 ---
 
 # DAC upload
 
-Three CLI calls, in order. The presigned URL is provisioned by the
-**datalake**; the ingest is triggered on the **DAC**. Two different
-slugs.
+End-to-end ingestion pipeline. The user drops a file; the skill resolves
+prerequisites, checks data quality, builds/validates the interop
+template, sandbox-tests one row, then uploads the whole file.
 
-1. `alvera datalakes upload-link <datalake_slug> <filename>
-   [tenant] --content-type <mime>` → returns `{ url, key, expires_in }`.
-   `url` is a presigned HTTPS PUT URL (S3 / R2).
-2. `curl -X PUT -H "Content-Type: <mime>" --upload-file <file> "<url>"`
-   → uploads the file to storage. The `Content-Type` header **must**
-   match what was sent in step 1, or the presigned URL will reject.
-3. `alvera data-activation-clients ingest-file <dac_slug> <key>
-   [tenant]` → triggers processing. Returns `{ batch_id, jobs_count,
-   key }`.
+```
+file → inspect → anti-pattern scan → resolve/create interop contract
+     → sandbox test → presigned upload → ingest-file → verify
+```
 
 ## Prerequisites
 
 - `alvera` CLI reachable, active session. If not, route to `guided`.
-- **Datalake slug** — for the upload-link call. From `guided`'s
-  `datalakes list` or the Alvera admin UI.
-- **DAC slug** — for the ingest-file call. The user supplies it; this
-  skill does not list or create DACs (the public API exposes neither).
-- **File path** — CSV or NDJSON. Other formats rejected by the API
-  (`content_type` enum is `text/csv | application/x-ndjson`).
+- **File path** — CSV (`.csv`) or NDJSON (`.ndjson` / `.jsonl`).
+- A **data source** and **tool** (intent `data_exchange`) must exist on
+  the datalake. The skill checks; if missing, it hands off to `guided`
+  (DAC-upload does not create data sources or tools).
 
 ## Workflow
 
-1. **Resolve the datalake slug automatically, don't elicit it blind.**
-   Before asking the user anything, run:
+1. **Resolve datalake** — `alvera datalakes list [tenant]`.
+   Disambiguate any slug blob the user supplied (exact match,
+   longest-prefix with `-` boundary, or pick from list). Same rules as
+   before — see `references/flow.md` step 0.
+
+2. **Resolve DAC** — `alvera data-activation-clients list <datalake>`.
+
+   | Case | Action |
+   |------|--------|
+   | User supplied slug, matches list | Use it |
+   | User supplied slug, no match | Show available, re-ask |
+   | No slug, one DAC exists | Propose it |
+   | No slug, multiple DACs | List and ask |
+   | No DAC exists | Offer to create one (step 2b) |
+
+   **2b — Create a DAC** (when none exists or user wants a new one):
+   - Auto-detect tool (`alvera tools list`) — pick the first with
+     `intent: data_exchange`. If none, hand off to `guided`.
+   - Auto-detect data source (`alvera data-sources list <datalake>`).
+     If none, hand off to `guided`.
+   - Elicit **name** and **description** only (everything else is
+     auto-resolved or set after the interop contract is created in
+     step 4).
+   - `tool_call_type`: always `manual_upload` for file ingest.
+   - The DAC is created after the interop contract (step 4), because it
+     needs `interoperability_contract_ids`.
+
+3. **Inspect the file** — two sub-steps, neither sends data values to
+   the model:
+
+   a. **Read headers only** — column names are not data:
+      - CSV: `head -n 1 <file>` → parse column names
+      - NDJSON: `head -n 1 <file>` → parse JSON keys
+
+   b. **Run the anti-pattern scanner** — a local Python script that
+      reads the first 100 rows and outputs a pattern summary (date
+      formats, value distributions for enum-like fields). The model
+      sees patterns and category labels, never individual row values.
+      See `references/anti-patterns.md` for the script template.
+
+4. **Resolve or create interop contract:**
+
+   a. **DAC already has contracts** — fetch each via
+      `alvera interop get <datalake> <slug>`. Cross-check the
+      template's `{{ msg.X }}` references against the file's columns.
+      If columns mismatch, warn. If anti-patterns were detected (e.g.
+      date format), check whether the template already handles them
+      (look for date-conversion Liquid logic). If not, offer to update
+      the contract.
+
+   b. **No contract, or user wants a new one** — auto-generate:
+      - Ask for `resource_type` if not already known (patient,
+        appointment, etc.)
+      - Fetch target field metadata:
+        `alvera interop metadata <datalake> <any-contract-slug>`
+        (or create a disposable identity contract to get metadata)
+      - Map file columns → FHIR fields. Present the proposed mapping
+        as a plain-language table:
+
+        ```
+        Source column   → FHIR field        Transform
+        ─────────────────────────────────────────────────
+        patient_id      → identifier[0]     system: urn:<ds-uri>
+        first_name      → name[0].given[0]  —
+        last_name       → name[0].family    —
+        dob             → birth_date        MM/DD/YY → YYYY-MM-DD
+        gender          → gender            | downcase
+        ```
+
+      - Apply anti-pattern fixes as Liquid transforms in the template
+        (see `references/templates.md` for snippets).
+      - Confirm the mapping with the user, then create:
+        `alvera interop create <datalake> --body-file <path>`
+
+   If creating a new DAC (step 2b), create it now with the contract id.
+
+5. **Sandbox test** — run one sample row through the contract pipeline
+   without writing to the DB:
 
    ```bash
-   alvera --profile <p> datalakes list [tenant]
+   # CSV — extract first data row as JSON, pipe directly to CLI
+   head -n 2 <file> | python3 -c "
+   import csv, json, sys
+   r = csv.DictReader(sys.stdin)
+   print(json.dumps(next(r)))
+   " | alvera interop run <datalake> <contract-slug> --body-file -
+
+   # NDJSON — first line is already JSON
+   head -n 1 <file> | alvera interop run <datalake> <contract> --body-file -
    ```
 
-   Use the returned slug list to disambiguate any slug blob the user
-   supplied. Three cases:
+   The sample row goes from disk to CLI — the model sees only the
+   pipeline output (`transformed`, `mdm_input`, `filter_result`).
 
-   - **User supplied a clearly single slug** that matches one of the
-     returned datalakes exactly → that's the datalake. Move on.
-   - **User supplied an ambiguous blob** like
-     `prime-medical-datalake-alvera-custom-alvera-reviews-dataactivationclient`
-     → find the **longest datalake slug that is a prefix** of the
-     blob, with a `-` boundary. Treat the remainder as the DAC slug
-     candidate. Confirm back to the user: *"I'm reading this as
-     datalake `prime-medical-datalake` + DAC
-     `alvera-custom-alvera-reviews-dataactivationclient`. Correct?"*
-     If they say no, ask them to split explicitly.
-   - **User invoked the skill with no arguments** → list datalakes,
-     present them as options if more than one, pick the one on `1`,
-     then elicit the DAC slug + file + optional tenant.
+   - `stage: "completed"` → show the transformed output, proceed
+   - `stage: "filtered"` → row was filtered — warn (the filter may be
+     too aggressive for the data)
+   - Error pointers in response → the template has a bug. Surface which
+     stage failed (`/template_config/body`, `/mdm_input_config/body`,
+     or `/data_activation_client_filter`), fix, and re-test
 
-   As of SDK 0.2.5, DAC CRUD is now public. After resolving the
-   datalake, **also list DACs** to validate the DAC slug:
+6. **Confirm and upload** — plain-language recap:
 
-   ```bash
-   alvera --profile <p> data-activation-clients list <datalake> [tenant]
-   ```
-
-   Match against the returned slugs. If the DAC slug doesn't match
-   any, tell the user and list what's available.
-
-2. **Elicit remaining fields in a single prompt** — whatever step 1
-   didn't resolve:
-
-   > "I've got:
-   >   - datalake: `prime-medical-datalake` (resolved from your input)
-   >   - DAC: `alvera-custom-alvera-reviews-dataactivationclient`
-   >     (tentative — no API to validate)
+   > Uploading:
+   >   - file: `./patients.csv` (12,431 rows, 2.1 MiB)
+   >   - content type: `text/csv`
+   >   - datalake: `prime-medical-datalake`
+   >   - DAC: `emr-patient-ingest` (manual_upload)
+   >   - contract: `emr-patient-transform` (patient, custom template)
+   >   - anti-patterns fixed: dob (MM/DD/YY → YYYY-MM-DD), gender (downcase)
+   >   - sandbox test: passed
    >
-   > Still need:
-   >   - **File path** (CSV, NDJSON, or JSONL).
-   >   - Optional: **tenant slug** if your profile doesn't default to
-   >     the right one."
+   > Proceed? (y/n)
 
-   If the user already passed the file and tenant, skip the prompt
-   and go straight to confirmation.
+   Then execute the three-step upload — see `references/flow.md`.
 
-3. **Validate locally, before any API call:**
-   - File exists, readable.
-   - Extension is `.csv`, `.ndjson`, or `.jsonl`. Otherwise stop —
-     even if the content is valid, the API enforces the enum.
-   - File size: warn above 100 MiB ("this may take a while to
-     upload"). Hard refuse above 2 GiB (presigned URL + server limits).
-   - Map extension → content type:
-     - `.csv` → `text/csv`
-     - `.ndjson`, `.jsonl` → `application/x-ndjson`
+7. **Report outcome:**
 
-4. **Confirm before calling the API.** Plain-language recap, single
-   bullet list:
-
-   > "Uploading:
-   >   - file: `./patients-2026-04-13.ndjson` (48,291 lines, 12.4 MiB)
-   >   - content type: `application/x-ndjson`
-   >   - datalake: `prime-medical-datalake` (issues the presigned URL)
-   >   - DAC: `acme-emr-dac` (triggers ingest after upload)
-   >   - tenant: `acme` (from profile)
-   >
-   > Proceed? (y/n)"
-
-5. **Run the three-step upload** — see `references/flow.md` for the
-   full scripted version (including error paths and the `curl` PUT
-   handling).
-
-6. **Report the outcome.** On success:
-
-   > "Uploaded and queued.
-   >   - key: `api-ingest/.../uploads/1a2b3c4d.ndjson`
+   > Uploaded and queued.
+   >   - key: `api-ingest/.../uploads/1a2b3c4d.csv`
    >   - batch_id: `550e8400-...`
    >   - jobs_count: 1
    >
-   > Processing runs async server-side. To verify rows landed, run
-   > `/query-datasets` and query the target table."
+   > Processing runs async. To verify rows landed, run
+   > `/query-datasets` and query the target table.
 
-   On failure at any step, surface stderr verbatim. Do not retry
-   automatically. Map step-specific failures to the offending input
-   (wrong slug → re-ask slug; wrong content-type → check file
-   extension; presigned URL rejection → likely wrong content-type
-   header).
+   On failure at any step, surface stderr verbatim. Map step-specific
+   failures to the offending input. Do not retry automatically.
 
 ## Stance: be proactive
 
-Assume the user wants to upload. Default to the forward path and
-confirm with yes/no. When inputs are resolved and the confirmation
-is yes, move immediately — don't re-ask.
+Assume the user wants to upload. Default to the forward path:
+- Resolve everything you can before asking.
+- When only one option exists (one datalake, one DAC, one tool), use it.
+- Anti-pattern scan runs automatically — don't ask permission.
+- Template generation proposes a mapping — user confirms with y/n.
+- Sandbox test runs automatically — don't ask permission.
+- When all inputs are resolved and confirmation is yes, move immediately.
 
 ## Hard constraints
 
-- **Auto-list datalakes before asking.** Run `alvera datalakes list
-  [tenant]` at the start of the flow and use the result to
-  disambiguate any slug blob the user supplied. Don't ask the user to
-  manually split `prime-medical-datalake-alvera-custom-...` when the
-  datalake list would have shown `prime-medical-datalake` immediately.
-- **Auto-list DACs too** (SDK ≥ 0.2.5). DAC CRUD is now public.
-  After resolving the datalake slug, run
-  `alvera data-activation-clients list <datalake>` and validate the
-  DAC slug against the returned slugs. If no match, list what's
-  available and re-ask.
-- **Content type must match.** The presigned PUT URL is signed with
-  the content-type from the `upload-link` call. If the `curl` PUT
-  sends a different `Content-Type` header, S3 / R2 rejects with 403.
-  Use the mapped mime from step 3, verbatim, in both places.
-- **Don't stream through the model.** The file goes from the user's
-  disk directly to the presigned URL via `curl`. Do not `Read` the
-  file into the conversation — it may contain data the user has not
-  authorised for us to see (same rule as `custom-dataset-creation`'s
-  compliance gate, applied here).
-- **Don't log the presigned URL.** It's short-lived but still
-  contains auth material. Print the `key` for reference; elide the
-  query string of the URL when showing progress.
-- **One file per invocation.** This skill uploads exactly one file.
-  Batch runs loop the user: "another file, or done?".
-- **Never persist the file** — no tempfile copying, no re-encoding.
-  The file the user named is the file that's uploaded.
+- **Anti-pattern scan is non-negotiable.** Always run the scanner. Date
+  format mismatches silently corrupt data downstream — a `03/15/60`
+  stored as-is in a `birth_date` field is useless for age calculations.
+- **Sandbox test before first live ingest.** Never skip the sandbox test
+  on the first upload through a new or modified contract. Skip only on
+  repeat uploads through a previously-validated contract (user can opt
+  out: "skip sandbox").
+- **Fixes go in the template, not the file.** Don't ask the user to
+  reformat their CSV. The Liquid template handles normalisation (date
+  conversion, case folding, status mapping).
+- **Don't stream data through the model.** File goes from disk to
+  presigned URL via `curl`. Headers are OK to read (column names, not
+  data). For sample-row analysis, pipe directly to CLI / scanner — the
+  model sees only the output summary, never raw data values.
+- **Don't log the presigned URL.** Print the `key` for reference; elide
+  the query string.
+- **Content-type must match.** Presigned URL is signed with the
+  content-type from `upload-link`. The `curl` PUT must send the same
+  header, or S3/R2 rejects with 403.
+- **One file per invocation.** Batch = loop: "another file, or done?"
+- **Never persist the file.** No tempfile copying, no re-encoding.
 
 ## References
 
-- `references/flow.md` — the full three-step upload procedure, with
-  error handling and `curl` details
-- `references/example-transcript.md` — reference dialog
+- `references/flow.md` — full pipeline procedure with CLI commands
+- `references/anti-patterns.md` — data quality patterns and scanner
+- `references/templates.md` — Liquid template generation and common
+  patterns
+- `references/example-transcript.md` — reference dialogs
 
 ## Downstream
 
-After a successful upload, the user typically wants:
-
-- `/query-datasets` — scaffold a local PostgREST + React explorer to
-  verify rows landed in the target table
+After a successful upload:
+- `/query-datasets` — scaffold a PostgREST + React explorer to verify
+  rows landed in the target table

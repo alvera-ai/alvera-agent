@@ -35,6 +35,7 @@ alvera login                           # exchange creds → session token (user 
 alvera logout                          # revoke + clear local credentials
 alvera whoami                          # print resolved profile + token presence
 alvera ping                            # health check
+alvera sessions-verify                 # verify session token via API
 ```
 
 The skill **does not invoke `login`**. The user runs it in their own
@@ -48,16 +49,20 @@ tenant. All `create` / `update` commands take exactly one of
 `--body '<json>'` or `--body-file <path>` (use `-` for stdin).
 
 ```bash
+# Tenants
+alvera tenants list
+
 # Datalakes
 alvera datalakes list        [tenant]
 alvera datalakes get         <id> [tenant]
 alvera datalakes create      [tenant]                          --body-file <path>
+alvera datalakes metadata    <datalake> [tenant]
 alvera datalakes upload-link <datalake> <filename> [tenant]    --content-type text/csv|application/x-ndjson
 # Prefer --body-file over --body '<json>' for datalake create — the payload
 # contains DB passwords. See resources.md → "Datalake" for the three
 # credential-sourcing patterns (env vars, .env, one-shot literal).
 # upload-link returns { url, key, expires_in }. Drives the DAC-upload skill;
-# pair it with `data-activation-clients ingest-file <dac> <key>` (below).
+# pair it with `data-activation-clients ingest-file <datalake> <slug> <key>`.
 
 # Data sources
 alvera data-sources list   <datalake> [tenant]
@@ -98,7 +103,7 @@ alvera connected-apps create      <datalake> [tenant]      --body '<json>' | --b
 alvera connected-apps update      <datalake> <id> [tenant] --body '<json>' | --body-file <path>
 alvera connected-apps sync-routes <datalake> <id> [tenant]
 
-# Data activation clients — full CRUD (SDK ≥ 0.2.5) + runtime ops.
+# Data activation clients — full CRUD + runtime ops.
 # CRUD is in `guided` scope; runtime ingest drives the `DAC-upload` skill.
 alvera data-activation-clients list         <datalake> [tenant]
 alvera data-activation-clients get          <datalake> <slug> [tenant]
@@ -110,6 +115,11 @@ alvera data-activation-clients run-manually <datalake> <slug> [tenant] [--body '
 alvera data-activation-clients ingest       <datalake> <slug> [tenant]  --body '<json>' | --body-file <path>
 alvera data-activation-clients ingest-file  <datalake> <slug> <key> [tenant]
 
+# Data activation client logs
+alvera data-activation-clients logs         <datalake> <slug> [tenant]
+alvera data-activation-clients log-get      <datalake> <slug> <id> [tenant]
+alvera data-activation-clients log-download <datalake> <slug> <id> [tenant]
+
 # Interoperability contracts (alias: interop)
 alvera interop list     <datalake> [tenant]
 alvera interop get      <datalake> <slug> [tenant]
@@ -119,7 +129,7 @@ alvera interop delete   <datalake> <slug> [tenant]
 alvera interop metadata <datalake> <slug> [tenant]
 alvera interop run      <datalake> <slug> [tenant] --body '<json>' | --body-file <path>
 
-# Agentic workflows
+# Agentic workflows — CRUD is datalake-scoped; execute/run are workflow-slug-scoped
 alvera workflows list     <datalake> [tenant]
 alvera workflows get      <datalake> <id> [tenant]
 alvera workflows create   <datalake> [tenant]       --body '<json>' | --body-file <path>
@@ -130,15 +140,22 @@ alvera workflows execute  <workflow-slug> [tenant]   --body '<json>' | --body-fi
 alvera workflows run      <workflow-slug> [tenant]   --body '<json>' | --body-file <path>
 # run takes { sql_where_clause, mode: "live"|"dry_run", manual_override? }
 
-# Workflow monitoring (read-only)
-alvera workflows batch-logs list    <workflow-slug> [tenant]
-alvera workflows batch-logs get     <workflow-slug> <id> [tenant]
-alvera workflows batch-logs start   <workflow-slug> <id> [tenant]
-alvera workflows batch-logs stop    <workflow-slug> <id> [tenant]
-alvera workflows batch-logs refresh <workflow-slug> <id> [tenant]
-alvera workflows workflow-logs list     <workflow-slug> [tenant]
-alvera workflows workflow-logs get      <workflow-slug> <id> [tenant]
-alvera workflows workflow-logs download <workflow-slug> <id> [tenant]
+# Workflow monitoring — flat command names (not nested subcommands)
+alvera workflows batch-logs          <workflow-slug> [tenant]
+alvera workflows batch-log           <workflow-slug> <id> [tenant]
+alvera workflows batch-log-start     <workflow-slug> <id> [tenant]
+alvera workflows batch-log-stop      <workflow-slug> <id> [tenant]
+alvera workflows batch-log-refresh   <workflow-slug> <id> [tenant]
+alvera workflows workflow-logs       <workflow-slug> [tenant]
+alvera workflows workflow-log        <workflow-slug> <id> [tenant]
+alvera workflows workflow-log-download <workflow-slug> <id> [tenant]
+
+# Datasets (search + metadata)
+alvera datasets search   <dataset> [--datalake-id <id>] [--page <n>] [--page-size <n>]
+alvera datasets metadata <dataset-type> [--datalake-id <id>] [--generic-table-id <id>]
+
+# MDM (Master Data Management)
+alvera mdm verify <datalake> [tenant]  --body '<json>' | --body-file <path>
 ```
 
 ## Output and errors

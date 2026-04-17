@@ -57,7 +57,7 @@ AGENT: [writes /tmp/workflow.json, chmod 600]
               --body '{"sql_where_clause":"1=1 LIMIT 1","mode":"dry_run"}']
        → enqueued_count: 1, batch_id: manual:abc123
 
-       [runs: alvera --profile default workflows workflow-logs list
+       [runs: alvera --profile default workflows workflow-logs
               review-sms-workflow]
        → status: completed, filter_result: true
 
@@ -81,7 +81,7 @@ AGENT: [reads workflow, updates status to "live"]
        **Review SMS Workflow** is now live. It will automatically
        process new appointments from `emr.acme-health.com`.
 
-       To monitor: `alvera workflows workflow-logs list review-sms-workflow`
+       To monitor: `alvera workflows workflow-logs review-sms-workflow`
 ```
 
 ## Custom build: REST API action workflow
@@ -164,7 +164,7 @@ AGENT: Let me check. What's the workflow slug?
 
 USER: review-sms-workflow
 
-AGENT: [runs: alvera --profile default workflows workflow-logs list
+AGENT: [runs: alvera --profile default workflows workflow-logs
               review-sms-workflow]
        → last 5 logs all show status: "filtered"
 
@@ -174,7 +174,7 @@ AGENT: [runs: alvera --profile default workflows workflow-logs list
        [runs: alvera --profile default workflows run review-sms-workflow
               --body '{"sql_where_clause":"1=1 LIMIT 1","mode":"dry_run",
               "manual_override":true}']
-       [runs: alvera --profile default workflows workflow-logs list
+       [runs: alvera --profile default workflows workflow-logs
               review-sms-workflow]
        → status: filtered, filter_expression: ""
          (filter output was empty — not "true")

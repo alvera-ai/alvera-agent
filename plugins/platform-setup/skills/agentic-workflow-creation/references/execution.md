@@ -96,8 +96,8 @@ For `patient` datasets, use `p.id` or `ri.value` instead of `a.*`.
 ### Workflow execution logs (per-event)
 
 ```bash
-alvera --profile <p> workflows workflow-logs list <slug> [tenant]
-alvera --profile <p> workflows workflow-logs get <slug> <id> [tenant]
+alvera --profile <p> workflows workflow-logs <slug> [tenant]
+alvera --profile <p> workflows workflow-log <slug> <id> [tenant]
 ```
 
 Key fields:
@@ -139,15 +139,15 @@ When `skipped`, check `runtime_filter_result`:
 ### Batch run logs
 
 ```bash
-alvera --profile <p> workflows batch-logs list <slug> [tenant]
-alvera --profile <p> workflows batch-logs get <slug> <id> [tenant]
-alvera --profile <p> workflows batch-logs refresh <slug> <id> [tenant]
+alvera --profile <p> workflows batch-logs <slug> [tenant]
+alvera --profile <p> workflows batch-log <slug> <id> [tenant]
+alvera --profile <p> workflows batch-log-refresh <slug> <id> [tenant]
 ```
 
 ### Download execution context
 
 ```bash
-alvera --profile <p> workflows workflow-logs download <slug> <id> [tenant]
+alvera --profile <p> workflows workflow-log-download <slug> <id> [tenant]
 ```
 
 Returns the full JSON context available during execution — useful for
@@ -176,7 +176,7 @@ alvera workflows run <slug> \
   --body '{"sql_where_clause":"1=1 LIMIT 1","mode":"dry_run"}'
 
 # 3. Check the log
-alvera workflows workflow-logs list <slug>
+alvera workflows workflow-logs <slug>
 # → status should be "completed" (or "filtered" if filter rejected)
 
 # 4. If filtered, pick a record that should pass and retry
@@ -184,7 +184,7 @@ alvera workflows run <slug> \
   --body '{"sql_where_clause":"ri.value = '\''EMR-APPT-12345'\''","mode":"dry_run"}'
 
 # 5. If completed, review the rendered templates
-alvera workflows workflow-logs download <slug> <log-id>
+alvera workflows workflow-log-download <slug> <log-id>
 
 # 6. Promote to live (with user confirmation)
 # Update status from "draft" to "live" via PUT

@@ -150,7 +150,7 @@ use case → template or custom build → create (draft)
 8. **Interpret logs.** Check execution results:
 
    ```bash
-   alvera --profile <p> workflows workflow-logs list <slug> [tenant]
+   alvera --profile <p> workflows workflow-logs <slug> [tenant]
    ```
 
    Surface the result in plain language:

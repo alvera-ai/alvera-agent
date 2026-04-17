@@ -331,3 +331,206 @@ which one. Do not auto-pick.
 against the connected app. No body. Treat it like a destructive-ish
 action: confirm before invoking, since it mutates routing state on the
 remote app.
+
+---
+
+## Agentic workflow
+
+`alvera workflows create <datalake> [tenant] --body-file <path>`
+
+An event-driven automation pipeline: records from a dataset enter a
+filter → context enrichment → AI decision → action execution cycle.
+Datalake-scoped. Complex resource with many nested objects — elicit in
+passes, not all at once.
+
+### Dependencies (create these first)
+
+- **AI agents** — at least one must exist (the workflow references
+  them by ID in the `ai_agents` array).
+- **Tools** — each action references a tool by ID.
+- **Generic table** — if `dataset_type == "generic_table"`, the target
+  table must exist and its ID is required.
+- **Connected app** — if any action routes through a connected app,
+  that app must exist.
+- **Interoperability contracts** — if the workflow references any for
+  row-level transformation.
+
+List existing resources before wiring: `alvera ai-agents list`,
+`alvera tools list`, etc. Surface what's available so the user picks
+from a menu rather than guessing IDs.
+
+### Pass 1 — identity
+
+| Field                 | Required | Default  | Notes                                                            |
+|-----------------------|----------|----------|------------------------------------------------------------------|
+| `name`                | **yes**  | —        | Unique within the datalake                                       |
+| `description`         | no       | —        | —                                                                |
+| `dataset_type`        | **yes**  | —        | What the workflow listens on. E.g. `patient`, `appointment`, `generic_table`, `observation` |
+| `generic_table_id`    | cond.    | —        | **Required when** `dataset_type == "generic_table"`. List tables and let user pick. |
+| `status`              | no       | `live`   | Start as `live` unless the user wants to build incrementally     |
+| `skip_mdm_resolution` | no       | `false`  | Skip MDM identity resolution. Ask only if the user brings it up  |
+
+### Pass 2 — AI agents
+
+List existing AI agents (`alvera ai-agents list <datalake>`) and let
+the user pick which to attach. For each:
+
+| Field                    | Required | Notes                                          |
+|--------------------------|----------|-------------------------------------------------|
+| `ai_agent_id`            | **yes**  | From the list                                   |
+| `position`               | no       | Execution order (0-indexed). Default = order picked |
+| `context_mapping_config` | no       | Free-form JSON — ask only if the user mentions custom context mapping |
+
+### Pass 3 — context datasets (optional)
+
+Datasets loaded before the decision stage for enrichment. Each entry:
+
+| Field              | Required | Default | Notes                                            |
+|--------------------|----------|---------|--------------------------------------------------|
+| `dataset_type`     | **yes**  | —       | E.g. `patient`, `appointment`, `generic_table`   |
+| `generic_table_id` | cond.    | —       | Required when `dataset_type == "generic_table"`  |
+| `where_clause`     | no       | —       | SQL WHERE to filter context records              |
+| `limit`            | no       | —       | Max rows to load                                 |
+| `position`         | no       | —       | Order in context loading                         |
+
+Ask: "Do you need additional context datasets loaded before the AI
+decision stage? If not, skip this." Most simple workflows don't need
+them.
+
+### Pass 4 — filter config (optional)
+
+A Liquid template that renders to `"true"` to skip a record. Shape:
+
+| Field           | Required | Notes                                                |
+|-----------------|----------|------------------------------------------------------|
+| `type`          | **yes**  | Enum: `system \| custom \| identity \| null`         |
+| `body`          | cond.    | Required when `type == "custom"` — the Liquid template body |
+| `path`          | cond.    | Required when `type == "system"` — filesystem path   |
+| `output_schema` | no       | JSON Schema for expected output                      |
+
+Ask: "Do you want to filter which records enter the workflow? If not,
+all records will be processed." Default = no filter (`null`).
+
+### Pass 5 — decision config (optional)
+
+The decision template configuration. Free-form object — the structure
+depends on the domain. Ask: "Do you have a decision template config,
+or should the AI agents handle all decision logic?" If the user has
+one, accept it as JSON.
+
+### Pass 6 — actions
+
+The most complex part. Each action fires when the decision table
+routes to its `decision_key`. For each action:
+
+| Field                            | Required | Notes                                                     |
+|----------------------------------|----------|-----------------------------------------------------------|
+| `action_type`                    | **yes**  | Enum: `sms \| email \| voice \| data_exchange`            |
+| `decision_key`                   | **yes**  | Which decision outcome triggers this action               |
+| `tool_id`                        | **yes**  | The tool that executes the action. List and pick.         |
+| `position`                       | no       | Execution order within actions sharing the same key       |
+| `tool_call`                      | **yes**  | Polymorphic — depends on `action_type` / tool kind        |
+| `trigger_template`               | no       | Liquid template for conditional triggering                |
+| `idempotency_template`           | no       | Liquid template for dedupe key generation                 |
+| `runtime_filter`                 | no       | Liquid filter evaluated at execution time                 |
+| `action_window_start`            | no       | Hour (0–23) — earliest time to execute                    |
+| `action_window_end`              | no       | Hour (0–23) — latest time to execute                      |
+| `connected_app_id`               | no       | If the action routes through a connected app              |
+| `connected_app_route`            | no       | Route path in the connected app                           |
+| `connected_app_metadata_template`| no       | Liquid template for app metadata                          |
+
+`tool_call` shape varies by `action_type` — the `tool_call_type`
+discriminator selects the variant: `sms_request`, `restapi_request`,
+`s3_request`, `aws_lambda_request`, etc. Elicit based on the tool
+kind that the user picked.
+
+Walk through actions one at a time: "Let's set up action 1. What
+decision key triggers it? What tool handles it?" Build incrementally.
+
+### After create
+
+- Report the workflow name, slug, and status.
+- Offer to execute a dry run: `alvera workflows run <slug> [tenant]
+  --body '{"sql_where_clause":"…","mode":"dry_run"}'`. This runs the
+  full pipeline without making external calls — good for validation.
+- Append to `infra.yaml` under `agentic_workflows:`.
+
+### Execution (post-create)
+
+Two modes:
+
+- `alvera workflows execute <slug> [tenant]` — triggers a single
+  execution (processes one batch of records).
+- `alvera workflows run <slug> [tenant] --body '{"sql_where_clause":
+  "status = active", "mode": "live|dry_run"}'` — bulk execution
+  filtered by SQL WHERE clause.
+
+Offer both after create. `dry_run` mode is safe; `live` mode fires
+real tool calls — confirm before invoking live.
+
+---
+
+## Interoperability contract
+
+`alvera interop create <datalake> [tenant] --body-file <path>`
+
+Declarative spec binding a `(datalake, resource_type)` pair to the
+ingestion pipeline: filter → transform → MDM input → resolve → upsert.
+Datalake-scoped.
+
+| Field                          | Required | Default | Notes                                                |
+|--------------------------------|----------|---------|------------------------------------------------------|
+| `name`                         | **yes**  | —       | Human-readable                                       |
+| `resource_type`                | **yes**  | —       | E.g. `patient`, `observation`, `generic_table`       |
+| `generic_table_id`             | cond.    | —       | Required when `resource_type == "generic_table"`     |
+| `type`                         | no       | —       | Template type: `system \| custom`                    |
+| `description`                  | no       | —       | —                                                    |
+| `data_activation_client_filter`| no       | —       | Liquid filter body — renders to `"true"` to skip     |
+| `template_config`              | no       | —       | TemplateConfig for transformation                    |
+| `mdm_input_config`             | no       | —       | TemplateConfig for MDM input mapping                 |
+
+### `TemplateConfig` shape (used by `template_config` and `mdm_input_config`)
+
+| Field           | Required | Notes                                                |
+|-----------------|----------|------------------------------------------------------|
+| `type`          | **yes**  | Enum: `system \| custom \| identity \| null`         |
+| `body`          | cond.    | Required when `type == "custom"`. Liquid template     |
+| `path`          | cond.    | Required when `type == "system"`. Filesystem path     |
+| `output_schema` | no       | JSON Schema for rendered output                      |
+
+---
+
+## Data activation client
+
+`alvera data-activation-clients create <datalake> [tenant] --body-file <path>`
+
+Binds a (datalake, data_source, tool) triple with a polymorphic
+`tool_call` config describing how to fetch data from an external
+system. Datalake-scoped. Full CRUD now available (SDK ≥ 0.2.5).
+
+| Field                          | Required | Default | Notes                                                 |
+|--------------------------------|----------|---------|-------------------------------------------------------|
+| `name`                         | **yes**  | —       | Unique within the datalake                            |
+| `data_source_id`               | **yes**  | —       | Owning data source                                    |
+| `tool_id`                      | **yes**  | —       | Tool that provides the external connection             |
+| `description`                  | no       | —       | —                                                     |
+| `cron_expressions`             | no       | `[]`    | Crontab array, e.g. `["0 */6 * * *"]`. Empty = on-demand |
+| `row_filter`                   | no       | —       | Liquid row filter                                     |
+| `filter_config`                | no       | —       | TemplateConfig for pre-filter                         |
+| `loop_over`                    | no       | —       | Array of context keys to iterate over                 |
+| `downstream_connection_ids`    | no       | `[]`    | DAC IDs triggered after this one completes            |
+| `interoperability_contract_ids`| no       | `[]`    | Contract IDs for row-level transformation             |
+| `tool_call`                    | **yes**  | —       | Polymorphic — set `tool_call_type` discriminator      |
+
+### `tool_call` types (set `tool_call_type`)
+
+- `manual_upload` — no extra config
+- `restapi_request` — `{ method, path, params, body, pagination_context_template }`
+- `s3_request` — `{ … }` (S3 fetch config)
+- `aws_lambda_request` — `{ … }` (Lambda invocation config)
+- `sftp_request` — `{ … }` (SFTP fetch config)
+- `sql_query` — `{ … }` (SQL query config)
+- `microsoft_share_point_excel_request` — `{ … }` (SharePoint Excel)
+
+Elicit based on the tool kind (the tool's `body.__type__` tells you
+which variant to use).

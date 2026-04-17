@@ -44,6 +44,9 @@ AGENT: [runs: alvera --profile default whoami]
          - action status updater
          - AI agent
          - connected app
+         - agentic workflow
+         - interop contract
+         - data activation client
          (custom datasets / generic tables → `custom-dataset-creation`
           skill — say the word and I'll hand off)
 
@@ -73,8 +76,9 @@ AGENT: [runs: alvera --profile default data-sources create acme-health acme \
        Created data source 'Acme EMR' (id: 7f3a-...).
        Appended to infra.yaml.
        What's next? (data source / tool / action status updater / AI
-       agent / connected app — or "done"; custom datasets are handled
-       by the `custom-dataset-creation` skill)
+       agent / connected app / agentic workflow / interop contract /
+       data activation client — or "done"; custom datasets are
+       handled by the `custom-dataset-creation` skill)
 
 USER: A manual upload tool for it.
 
@@ -99,8 +103,9 @@ AGENT: [runs: alvera --profile default tools create acme \
        Created tool 'Acme Manual Upload' (id: 9b2e-...).
        Appended to infra.yaml.
        What's next? (data source / tool / action status updater / AI
-       agent / connected app — or "done"; custom datasets are handled
-       by the `custom-dataset-creation` skill)
+       agent / connected app / agentic workflow / interop contract /
+       data activation client — or "done"; custom datasets are
+       handled by the `custom-dataset-creation` skill)
 ```
 
 Notes on style:

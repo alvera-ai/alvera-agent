@@ -55,11 +55,13 @@ password.
    `alvera ping`; pick the target datalake via `alvera datalakes list`.
 3. **Open the resource loop** — ask what the user wants to set up,
    **and always list the options inline**. Example: "What's next? You
-   can set up a data source, tool, action status updater, AI agent, or
-   connected app. For a custom dataset / generic table from a sample
-   file, I'll hand you off to the `custom-dataset-creation` skill."
-   Repeat the option list every time you return to the loop (after each
-   successful create or skip) — don't assume the user remembers.
+   can set up a data source, tool, action status updater, AI agent,
+   connected app, agentic workflow, interop contract, or data
+   activation client. For a custom dataset / generic table from a
+   sample file, I'll hand you off to the `custom-dataset-creation`
+   skill." Repeat the option list every time you return to the loop
+   (after each successful create or skip) — don't assume the user
+   remembers.
 4. **Per resource:**
    - **List first** to detect collisions (`alvera <resource> list ...`).
    - **Elicit fields** per `references/resources.md`. Enum lists there are

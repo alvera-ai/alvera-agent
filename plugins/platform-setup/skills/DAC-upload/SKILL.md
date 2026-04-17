@@ -68,10 +68,15 @@ slugs.
      present them as options if more than one, pick the one on `1`,
      then elicit the DAC slug + file + optional tenant.
 
-   Since DAC CRUD isn't exposed on the public API, we can't
-   cross-check the DAC slug the same way. Accept whatever the blob
-   implies (or the user provides) and let the `ingest-file` call in
-   step 3 be the authoritative validator.
+   As of SDK 0.2.5, DAC CRUD is now public. After resolving the
+   datalake, **also list DACs** to validate the DAC slug:
+
+   ```bash
+   alvera --profile <p> data-activation-clients list <datalake> [tenant]
+   ```
+
+   Match against the returned slugs. If the DAC slug doesn't match
+   any, tell the user and list what's available.
 
 2. **Elicit remaining fields in a single prompt** — whatever step 1
    didn't resolve:
@@ -144,12 +149,11 @@ is yes, move immediately — don't re-ask.
   disambiguate any slug blob the user supplied. Don't ask the user to
   manually split `prime-medical-datalake-alvera-custom-...` when the
   datalake list would have shown `prime-medical-datalake` immediately.
-- **Don't try to list DACs.** The public API exposes no `list` /
-  `get` for `data-activation-clients` (runtime only: `ingest`,
-  `ingest-file`). Accept the DAC slug the user gives you (or the
-  leftover after stripping the datalake prefix), and let
-  `ingest-file` in step 5 be the validator. A 404 there → re-ask the
-  DAC slug.
+- **Auto-list DACs too** (SDK ≥ 0.2.5). DAC CRUD is now public.
+  After resolving the datalake slug, run
+  `alvera data-activation-clients list <datalake>` and validate the
+  DAC slug against the returned slugs. If no match, list what's
+  available and re-ask.
 - **Content type must match.** The presigned PUT URL is signed with
   the content-type from the `upload-link` call. If the `curl` PUT
   sends a different `Content-Type` header, S3 / R2 rejects with 403.

@@ -98,12 +98,47 @@ alvera connected-apps create      <datalake> [tenant]      --body '<json>' | --b
 alvera connected-apps update      <datalake> <id> [tenant] --body '<json>' | --body-file <path>
 alvera connected-apps sync-routes <datalake> <id> [tenant]
 
-# Data activation clients — runtime ingest only (CRUD not on public API).
-# `ingest-file` triggers processing of a file previously uploaded via
-# `datalakes upload-link` (above). Drives the `DAC-upload` skill — don't
-# invoke directly from `guided`.
-alvera data-activation-clients ingest      <slug> [tenant]      --body '<json>' | --body-file <path>
-alvera data-activation-clients ingest-file <slug> <key> [tenant]
+# Data activation clients — full CRUD (SDK ≥ 0.2.5) + runtime ops.
+# CRUD is in `guided` scope; runtime ingest drives the `DAC-upload` skill.
+alvera data-activation-clients list         <datalake> [tenant]
+alvera data-activation-clients get          <datalake> <slug> [tenant]
+alvera data-activation-clients create       <datalake> [tenant]      --body '<json>' | --body-file <path>
+alvera data-activation-clients update       <datalake> <slug> [tenant] --body '<json>' | --body-file <path>
+alvera data-activation-clients delete       <datalake> <slug> [tenant]
+alvera data-activation-clients metadata     <datalake> <slug> [tenant]
+alvera data-activation-clients run-manually <datalake> <slug> [tenant] [--body '<json>']
+alvera data-activation-clients ingest       <datalake> <slug> [tenant]  --body '<json>' | --body-file <path>
+alvera data-activation-clients ingest-file  <datalake> <slug> <key> [tenant]
+
+# Interoperability contracts (alias: interop)
+alvera interop list     <datalake> [tenant]
+alvera interop get      <datalake> <slug> [tenant]
+alvera interop create   <datalake> [tenant]       --body '<json>' | --body-file <path>
+alvera interop update   <datalake> <slug> [tenant] --body '<json>' | --body-file <path>
+alvera interop delete   <datalake> <slug> [tenant]
+alvera interop metadata <datalake> <slug> [tenant]
+alvera interop run      <datalake> <slug> [tenant] --body '<json>' | --body-file <path>
+
+# Agentic workflows
+alvera workflows list     <datalake> [tenant]
+alvera workflows get      <datalake> <id> [tenant]
+alvera workflows create   <datalake> [tenant]       --body '<json>' | --body-file <path>
+alvera workflows update   <datalake> <id> [tenant]  --body '<json>' | --body-file <path>
+alvera workflows delete   <datalake> <id> [tenant]
+alvera workflows metadata <datalake> <id> [tenant]
+alvera workflows execute  <workflow-slug> [tenant]   --body '<json>' | --body-file <path>
+alvera workflows run      <workflow-slug> [tenant]   --body '<json>' | --body-file <path>
+# run takes { sql_where_clause, mode: "live"|"dry_run", manual_override? }
+
+# Workflow monitoring (read-only)
+alvera workflows batch-logs list    <workflow-slug> [tenant]
+alvera workflows batch-logs get     <workflow-slug> <id> [tenant]
+alvera workflows batch-logs start   <workflow-slug> <id> [tenant]
+alvera workflows batch-logs stop    <workflow-slug> <id> [tenant]
+alvera workflows batch-logs refresh <workflow-slug> <id> [tenant]
+alvera workflows workflow-logs list     <workflow-slug> [tenant]
+alvera workflows workflow-logs get      <workflow-slug> <id> [tenant]
+alvera workflows workflow-logs download <workflow-slug> <id> [tenant]
 ```
 
 ## Output and errors

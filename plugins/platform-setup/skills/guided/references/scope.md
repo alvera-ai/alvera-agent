@@ -4,18 +4,26 @@
 
 | Resource                | Operations                                  |
 |-------------------------|---------------------------------------------|
-| `datalakes`             | list, get, create                           |
+| `datalakes`             | list, get, create, upload-link              |
 | `dataSources`           | list, create, update                        |
 | `tools`                 | list, get, create, update, delete           |
 | `actionStatusUpdaters`  | list, create, update                        |
 | `aiAgents`              | list, get, create, update, delete           |
 | `connectedApps`         | list, get, create, update, syncRoutes       |
+| `agenticWorkflows`      | list, get, create, update, delete, execute, run |
+| `interopContracts`      | list, get, create, update, delete, run      |
+| `dataActivationClients` | list, get, create, update, delete, run-manually |
 | `ping`                  | health check                                |
 
 Generic tables (custom datasets) are **not** handled by this skill —
 they live in `custom-dataset-creation` because the flow needs a
 compliance gate and column-profiling steps that don't fit the generic
 resource loop.
+
+Workflow runtime ops (batch-logs, workflow-logs, download) are **read-
+only monitoring** — the skill offers them when the user asks "what
+happened to my last run?" but does not drive them proactively. DAC
+runtime ops (ingest, ingest-file) live in the `DAC-upload` skill.
 
 Datalake creation is in scope but is sensitive — it takes DB
 credentials (four roles × password/host/port/schema/SSL/auth). See

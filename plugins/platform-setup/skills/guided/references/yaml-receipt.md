@@ -53,6 +53,9 @@ generic_tables: []
 action_status_updaters: []
 ai_agents: []
 connected_apps: []
+agentic_workflows: []
+interoperability_contracts: []
+data_activation_clients: []
 ```
 
 ### Connected app shape (when present)

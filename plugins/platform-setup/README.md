@@ -1,12 +1,90 @@
 # platform-setup
 
 Claude Code plugin for conversationally provisioning Alvera platform
-resources via [`@alvera-ai/platform-sdk`](https://www.npmjs.com/package/@alvera-ai/platform-sdk).
+resources via [`@alvera-ai/platform-sdk@0.7.2`](https://www.npmjs.com/package/@alvera-ai/platform-sdk)
+(pinned exact, see "SDK pin" below).
 
 ## Skills
 
-Five skills. `guided` handles the general resource loop. Three form a
-dataset onboarding chain. One handles workflow automation — each is
+Eight skills, two layers:
+
+```
+DOMAIN ORCHESTRATORS                RESOURCE WORKHORSES
+(walk _order.json sequences,        (each independently invokable;
+ delegate to workhorses)             also called BY orchestrators)
+
+  /healthcare                          /guided
+  /accounts-receivable  (stub)         /custom-dataset-creation
+  /payment-risk         (stub)         /DAC-upload
+                                       /agentic-workflow-creation
+                                       /query-datasets
+```
+
+Domain skills mirror `tests/<domain>/_order.json` from
+`@alvera-ai/platform-sdk@0.7.2` — the integration-tests suite is the
+**executable contract**; domain skills are the **conversational driver**
+that walks the same sequence with user-supplied data.
+
+The five resource workhorses below remain independently invokable for
+ad-hoc / out-of-sequence work.
+
+## SDK pin
+
+This plugin pins to **`@alvera-ai/platform-sdk@0.7.2`** exactly. The pin
+is asymmetric vs the platform repo: platform tracks SDK `main` (so it
+surfaces SDK regressions first), and this plugin pins to a tag (so a
+domain walk you ship to a customer is byte-for-byte reproducible). When
+the SDK cuts a new tag worth pinning to, bump every domain SKILL.md +
+this README in one PR.
+
+## Domain skills
+
+### `healthcare` — `/platform-setup:healthcare`
+
+End-to-end provisioning of a healthcare host on Alvera, walking the
+canonical 11-phase setup defined by `tests/healthcare/_order.json` at
+the pinned SDK tag. Each phase delegates to a primitive skill and ends
+with a `pnpm test:healthcare -- <phase>` verification pointer back at
+the corresponding integration-tests spec, so the conversational setup
+and the automated suite never drift apart.
+
+```
+1 bootstrap                  →  /guided (datalake create)
+2 data-sources               →  /guided (data-sources)
+3 custom-datasets            →  /custom-dataset-creation
+4 interoperability-contracts →  /guided (interop-contracts)
+5 invite-team                →  /guided (admin invite)
+6 tools                      →  /guided (tools — SMS / Manual / LLM)
+7 create-dac                 →  /guided (data-activation-clients)
+8 run-dac-single             →  /DAC-upload (single-row)
+9 run-dac-bulk               →  /DAC-upload (CSV)
+10 standard-workflow         →  /agentic-workflow-creation (template)
+11 agent-driven-workflow     →  /agentic-workflow-creation (custom + AI)
+```
+
+Per-phase elicitation, fixture references, and an end-to-end transcript
+live in `skills/healthcare/references/`.
+
+### `accounts-receivable` — `/platform-setup:accounts-receivable` *(stub)*
+
+Domain orchestrator for accounts-receivable. **Currently a stub** — the
+manifest at v0.7.2 contains only `["smoke"]` because the AR industry is
+not yet productionised. The skill sets expectations explicitly and
+routes to `/guided` for ad-hoc resource creation with AR-flavoured
+suggestions (invoice headers, payment events, dunning workflows).
+Replaced by a full phase-walk when AR integration coverage lands.
+
+### `payment-risk` — `/platform-setup:payment-risk` *(stub)*
+
+Domain orchestrator for payment-risk (KYC, AML, fraud). **Currently a
+stub** — same shape as accounts-receivable. Routes to `/guided` with
+payment-risk-flavoured suggestions (KYC submissions, sanctions hits,
+AML triage workflows).
+
+## Resource workhorses
+
+`guided` handles the general resource loop. Three form a dataset
+onboarding chain. One handles workflow automation — each is
 independently invokable.
 
 ```

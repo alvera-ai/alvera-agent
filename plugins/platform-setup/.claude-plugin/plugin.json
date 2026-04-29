@@ -1,6 +1,6 @@
 {
   "name": "platform-setup",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Conversational, guardrailed setup of Alvera platform resources via @alvera-ai/platform-sdk. Ships five skills: `guided` (general resource loop), `custom-dataset-creation` (onboard a generic table from a CSV/NDJSON sample), `DAC-upload` (end-to-end ingestion pipeline with interop template generation and anti-pattern detection), `agentic-workflow-creation` (build, test, and validate event-driven workflows with production templates), and `query-datasets` (scaffold a local PostgREST + React explorer).",
   "author": {
     "name": "Alvera"

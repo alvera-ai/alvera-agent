@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/alvera-ai/alvera-agent/compare/v0.2.0...v0.3.0) (2026-04-30)
+
+
+### Features
+
+* add domain-first skills (healthcare + AR/PR stubs) pinned to SDK 0.7.2 ([b646a93](https://github.com/alvera-ai/alvera-agent/commit/b646a93c85d18a3956b856bff4065f42153cacca))
+* add domain-first skills (healthcare + AR/PR stubs) pinned to SDK 0.7.2 ([a09766d](https://github.com/alvera-ai/alvera-agent/commit/a09766d8050fe293c9ea03971ffd51d6f1ac692e))
+
 ## [0.2.0](https://github.com/alvera-ai/alvera-agent/compare/v0.1.0...v0.2.0) (2026-04-29)
 
 

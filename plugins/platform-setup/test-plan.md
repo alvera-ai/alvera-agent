@@ -1,12 +1,21 @@
 # End-to-end test plan
 
-Validate all five skills in a single flow — from empty tenant to
-queried data. Uses the `alvera` CLI throughout. Each phase maps to a
-skill; the test proves the hand-offs work.
+Validate all eight skills (3 domain orchestrators + 5 resource
+workhorses) in a single flow — from empty tenant to queried data.
+Uses the `alvera` CLI throughout. Each phase maps to a skill; the
+test proves the hand-offs work.
+
+## SDK pin
+
+This plan targets `@alvera-ai/platform-sdk@0.7.2` exactly. The phase
+sequence below mirrors `integration-tests/tests/healthcare/_order.json`
+at that tag. A different SDK version may have a different `_order.json`,
+in which case re-pin this plan and the domain skills together.
 
 ## Prerequisites
 
-- `alvera` CLI installed (`npx -p @alvera-ai/platform-sdk alvera --version`)
+- `alvera` CLI v0.7.2 installed (`alvera --version` reports `0.7.2`).
+  Install: `npm install -g @alvera-ai/platform-sdk@0.7.2`
 - A tenant with valid credentials (`alvera login`)
 - Local platform running or access to staging
 - Python 3 available (for profiler scripts)

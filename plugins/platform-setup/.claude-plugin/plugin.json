@@ -1,6 +1,6 @@
 {
   "name": "platform-setup",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Conversational, guardrailed setup of Alvera platform resources via @alvera-ai/platform-sdk@0.7.2. Ships eight skills: three domain orchestrators (`healthcare` end-to-end 11-phase walk; `accounts-receivable` and `payment-risk` stubs that mirror the integration-tests `_order.json` and route to `guided` until real coverage lands) plus five resource workhorses: `guided` (general resource loop), `custom-dataset-creation` (onboard a generic table from a CSV/NDJSON sample), `DAC-upload` (end-to-end ingestion pipeline with interop template generation and anti-pattern detection), `agentic-workflow-creation` (build, test, and validate event-driven workflows with production templates), and `query-datasets` (scaffold a local PostgREST + React explorer).",
   "author": {
     "name": "Alvera"

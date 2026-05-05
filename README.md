@@ -4,9 +4,21 @@ Claude Code marketplace for Alvera platform plugins.
 
 ## What's here
 
-| Plugin                                | Skills                            | What it does |
-|---------------------------------------|-----------------------------------|--------------|
-| [`platform-setup`](./plugins/platform-setup) | [`guided`](./plugins/platform-setup/skills/guided/SKILL.md) | Conversationally provision Alvera platform resources (data sources, tools, generic tables, action status updaters, AI agents) for an existing tenant. |
+| Plugin | Skill | What it does |
+|--------|-------|--------------|
+| [`alvera-ai`](./plugins/alvera-ai) | [`guided`](./plugins/alvera-ai/skills/guided/SKILL.md) | Outcome-driven provisioning: user describes a business goal, the skill derives the full dependency chain, gap-analyses, and provisions everything in order. Handles all resource types in a single skill. |
+
+## How it works
+
+**Top-down design, bottom-up execution.** The user says "I want to send
+review SMS after appointments" and the skill derives: workflow → SMS tool →
+data source → datalake. It checks what exists, provisions what's missing,
+and tests along the way.
+
+All resource types handled in one skill: datalakes, data sources, tools,
+generic tables (with compliance gate), AI agents, workflows (with templates),
+connected apps, interop contracts, data activation clients, file uploads,
+and PostgREST explorers.
 
 ## Install
 
@@ -14,25 +26,18 @@ In Claude Code:
 
 ```
 /plugin marketplace add alvera-ai/alvera-agent
-/plugin install platform-setup@alvera-agent
+/plugin install alvera-ai@alvera-agent
 ```
 
-Then invoke a skill from this plugin with:
+Then invoke:
 
 ```
-/platform-setup:guided
+/alvera-ai:guided
 ```
-
-## What this is not
-
-- Not a tenant or datalake provisioner — those are admin operations.
-- Not a runtime tool — no dataset search, workflow execution, or data
-  ingestion. This is for *setup* only.
 
 ## Underlying SDK
 
-The `platform-setup` plugin drives [`@alvera-ai/platform-sdk`](https://www.npmjs.com/package/@alvera-ai/platform-sdk).
-The skill will install the SDK in your project if needed.
+The plugin drives [`@alvera-ai/platform-sdk`](https://www.npmjs.com/package/@alvera-ai/platform-sdk).
 
 ## License
 

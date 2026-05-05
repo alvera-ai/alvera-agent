@@ -1,0 +1,10 @@
+{
+  "name": "alvera-ai",
+  "version": "0.2.0",
+  "description": "Top-down, outcome-driven provisioning of Alvera platform resources via @alvera-ai/platform-sdk. Single guided skill: user describes a business goal, the skill derives the full dependency chain, gap-analyses against existing resources, and provisions everything in the correct order — datalakes, data sources, tools, generic tables, AI agents, workflows, connected apps, interop contracts, data activation clients, and data uploads.",
+  "author": {
+    "name": "Alvera"
+  },
+  "homepage": "https://github.com/alvera-ai/alvera-agent",
+  "license": "MIT"
+}

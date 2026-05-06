@@ -312,6 +312,19 @@ to discover them — the API is authoritative.
 {% endif %}
 ```
 
+### Bracket notation for spaced keys
+
+If the dataset has columns with spaces (e.g. from a CSV with human-readable
+headers), use bracket notation in Liquid templates:
+
+```liquid
+{{ generic_table_row["Patient First Name"] }}
+{% if generic_table_row["Visit Status"] == "CHK" %}true{% endif %}
+```
+
+**Bracket notation is case-sensitive.** The key must match the column name
+exactly as stored. Dot notation on spaced keys causes a parse error.
+
 ### Filter vs runtime_filter semantics
 
 Both output `"true"` to **proceed**:

@@ -192,6 +192,65 @@ not the file.
 "identifier": [{"system": "urn:emr:patient-id", "value": "{{ msg.patient_id }}"}]
 ```
 
+### Column names with spaces (bracket notation)
+
+CSV columns with spaces (e.g. `Patient First Name`, `Appointment Date`)
+**must** use bracket notation. Dot notation causes a parse error.
+
+| Column style | Access syntax | Works? |
+|-------------|---------------|--------|
+| `patient_id` (snake_case) | `msg.patient_id` | yes |
+| `Patient First Name` (spaces) | `msg["Patient First Name"]` | yes |
+| `Patient First Name` (spaces) | `msg.Patient First Name` | **NO — parse error** |
+
+**Bracket notation is case-sensitive.** `msg["Patient DOB"]` works,
+`msg["patient dob"]` does not.
+
+Common pattern — assign to shorthand, then use brackets:
+```liquid
+{% assign p = msg %}
+{{ p["Patient First Name"] }}
+{{ p["Patient DOB"] | parse_date: "{M}/{D}/{YYYY}" }}
+{{ p["Patient Cell Phone"] }}
+```
+
+**Date parsing with `parse_date` filter:**
+```liquid
+{{ msg["Appointment Date"] | parse_date: "{M}/{D}/{YYYY}" }}
+```
+
+This replaces manual `split "/"` logic when the platform's `parse_date`
+filter is available. The filter converts to ISO `YYYY-MM-DD`.
+
+**Time parsing with `convert_time` filter:**
+```liquid
+{{ msg["Appointment Start Time"] | convert_time: "{h12}:{m} {am}" }}
+```
+
+Converts `08:30 AM` → `08:30:00`.
+
+**Status mapping with spaced keys:**
+```liquid
+{% assign raw_status = msg["Visit Status"] | downcase | strip %}
+{% if raw_status == "chk" %}fulfilled
+{% elsif raw_status == "cancelled" %}cancelled
+{% else %}booked{% endif %}
+```
+
+**Filter templates with spaced keys:**
+```liquid
+{% if msg.row["Visit Status"] == "CHK" %}true{% endif %}
+```
+
+In filter context, the row is under `msg.row`, not `msg` directly.
+
+**When to use bracket vs dot notation:**
+
+During column profiling (Step 2), check if any column names contain spaces.
+If yes, the Liquid template MUST use bracket notation for those columns.
+If the user provides a CSV with mixed naming (some snake_case, some spaced),
+use brackets for spaced columns and either notation for snake_case.
+
 ## Step 6: Resolve or create interop contract
 
 ### DAC already has contracts

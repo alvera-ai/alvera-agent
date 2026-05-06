@@ -12,9 +12,10 @@ Never auto-update on collision. Never auto-rename.
 
 ## Confirm destructives
 
-`alvera tools delete` and `alvera ai-agents delete` require the user to
-type `yes delete <name>` *exactly*. Partial confirmations ("yes",
-"go ahead", "sure") are insufficient — re-prompt.
+For delete operations, ask: "Type `yes delete <slug>` to confirm."
+Match on the resource **slug** (not display name). Accept if the user's
+response contains `yes delete` followed by the correct slug (case-insensitive).
+Partial confirmations ("yes", "go ahead", "sure") are insufficient — re-prompt.
 
 `alvera connected-apps sync-routes <datalake> <id>` mutates routing
 state on the remote app. Confirm with a plain "y/n" before invoking.
@@ -94,10 +95,10 @@ Enum lists in `resources.md` are **hints for conversation flow**, not the
 source of truth.
 
 1. User supplies a value matching `resources.md` → use it.
-2. User supplies something plausible but not in local list → pass it
-   through to the CLI. Local list may be stale.
-3. On a 4xx, surface stderr verbatim, re-elicit just that field, update
-   local enum list for the session.
+2. User supplies something plausible but not in the documented list →
+   pass it through to the CLI. The list may be stale.
+3. On a 4xx, surface stderr verbatim, re-elicit just that field. Note the
+   valid values from the error for subsequent prompts in this session.
 4. If API contradicts `resources.md`, API wins.
 
 Structural validations (required fields, valid cron, positive integers,
@@ -115,3 +116,13 @@ Before `update`:
 
 CLI exits non-zero on any failure. Surface stderr verbatim.
 Do not invent fallbacks. Do not retry without asking. Do not swallow.
+
+**Recovery pattern:** When a command fails:
+1. Show the error to the user verbatim.
+2. Diagnose: is it a field validation error (4xx), auth issue, or server error?
+3. Suggest a specific next step:
+   - 4xx → "Field `X` was rejected. What value should I use instead?"
+   - 401/403 → "Session may be expired. Please re-run `alvera login`."
+   - 5xx → "Server error. Try `alvera raw GET <path>` to verify, or retry?"
+   - Timeout → "Request timed out. Retry? (y/n)"
+4. If the user says retry, re-run the exact same command once.

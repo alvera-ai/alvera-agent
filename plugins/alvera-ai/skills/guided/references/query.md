@@ -12,7 +12,7 @@ alvera datasets metadata <dataset-type> [--datalake-id <id>] [--generic-table-id
 
 | Flag              | Default | Purpose                          |
 |-------------------|---------|----------------------------------|
-| `--datalake-id`   | active  | Scope search to a specific lake  |
+| `--datalake-id`   | from bootstrap | Scope search to a specific lake (defaults to datalake chosen at bootstrap) |
 | `--page`          | 1       | Pagination page number           |
 | `--page-size`     | 20      | Results per page                 |
 | `--generic-table-id` | —    | For metadata on generic tables   |

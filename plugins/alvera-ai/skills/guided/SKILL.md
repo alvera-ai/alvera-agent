@@ -24,7 +24,7 @@ the skill derives what's needed, checks what exists, and builds in order.
 
 **Top-down design, bottom-up execution:**
 - User: "I want to send review SMS after appointments"
-- Skill: derives → workflow → SMS tool → data source → datalake
+- Skill: derives → datalake → data source → SMS tool → workflow
 - Skill: checks → datalake exists, data source exists, tool missing, workflow missing
 - Skill: provisions in order → tool → workflow → done
 
@@ -53,7 +53,8 @@ Ask in a single prompt:
 1. Profile name (default `default`)
 2. Tenant slug
 3. Base URL (default `https://admin.alvera.ai`)
-4. Emit `infra.yaml` receipt? (default yes)
+
+Receipt: always emit `infra.yaml` — don't ask.
 
 **CLI resolution** — `alvera --version` or
 `npx -p @alvera-ai/platform-sdk alvera --version`. If both fail, hand
@@ -69,16 +70,15 @@ passwords. Verify with `alvera whoami`.
 Verify connectivity (`alvera ping`), pick datalake
 (`alvera datalakes list`). If no datalake exists, offer to create one:
 
-**Option A: Use `alvera init infra-setup`** — generates a `.env` with all
-datalake fields (name, data domain, timezone, pool size, 4 DB roles, 2
-storage variants). Fill it out, then create the datalake from those values.
-
-**Option B: Provision Postgres via Neon** — use the Neon API to create a
-project and get connection details in a single call. See
+**Option A (preferred): Provision Postgres via Neon** — use the Neon API
+to create a project and get connection details in a single call. See
 `references/neon-project.md` for the full API surface, response shape,
 and mapping to Alvera datalake DB role fields. Requires `NEON_API_KEY`
-env var. This is the preferred path — one API call returns host, port,
-database, role, and password.
+env var. One API call returns host, port, database, role, and password.
+
+**Option B: Use `alvera init infra-setup`** — generates a `.env` with all
+datalake fields (name, data domain, timezone, pool size, 4 DB roles, 2
+storage variants). Fill it out, then create the datalake from those values.
 
 After obtaining connection details, create the datalake on Alvera via
 `alvera datalakes create` per `references/resources.md` → Datalake.
@@ -86,7 +86,12 @@ All four Alvera roles (regulated/unregulated × reader/writer) can reuse
 the same Neon connection unless the user needs isolation.
 
 Session state to retain: `profile`, `tenantSlug`, `datalakeSlug`,
-`datalakeId`, `baseUrl`, receipt enabled, receipt path.
+`datalakeId`, `baseUrl`.
+
+**Context switching:** If the user says "now do this for a different
+datalake" or "switch to tenant X", re-run the relevant bootstrap checks
+(whoami, datalakes list) and update session state. Never silently use
+stale state from a previous datalake/tenant.
 
 ### Step 3: Gap analysis
 
@@ -166,6 +171,18 @@ Don't present long menus when one path is obvious.
 - Anti-pattern scans and sandbox tests run automatically.
 - When the user agrees, move immediately — don't re-confirm.
 
+**Fast-path vs confirmation-required:**
+
+| Action | Speed |
+|--------|-------|
+| Resource creation (non-destructive) | Confirm once with bullet summary, then create |
+| Anti-pattern scan, sandbox test | Run automatically, no confirmation |
+| Dry-run workflow test | Run automatically after draft creation |
+| Delete a resource | Require `yes delete <name>` exactly |
+| Promote workflow to live | Require explicit y/n |
+| `sync-routes` on connected app | Require explicit y/n |
+| Update existing resource | Show old → new diff, require y/n |
+
 ## Hard constraints
 
 Read before any user interaction:
@@ -178,7 +195,7 @@ Read before any user interaction:
 ## CLI
 
 `alvera` from [`@alvera-ai/platform-sdk`](https://www.npmjs.com/package/@alvera-ai/platform-sdk)
-(>= 0.7.3). Two invocation forms:
+(>= 0.8.0). Two invocation forms:
 
 ```bash
 npx -p @alvera-ai/platform-sdk alvera <command>   # zero-install

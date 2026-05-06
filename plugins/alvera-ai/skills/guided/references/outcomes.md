@@ -4,6 +4,16 @@ Maps business outcomes to resource dependency chains. The skill matches
 user intent to one of these patterns, derives the chain, then gap-analyses
 against existing resources.
 
+## Data direction rule
+
+When deriving chains, classify each action by data direction:
+
+- **Data IN** (ingest, record, sync, store) → **DAC**
+- **Data OUT** (send, notify, trigger, push) → **Agentic Workflow**
+
+This holds ~80% of the time. Agentic workflows only send — they don't
+store or ingest. "Record responses" is ingestion, not output.
+
 ## How to read the chains
 
 Each chain lists resources in **dependency order** (leaves first). The skill
@@ -128,11 +138,11 @@ generic table (if storing custom data).
 
 **Chain:**
 ```
-query explorer (scaffold) — no platform resources needed
+datasets search — no platform resources needed (read-only)
 ```
 
-**Sub-flow:** Follow `references/query.md` — scaffolds a local Vite + React
-PostgREST explorer. Data never enters the conversation.
+**Sub-flow:** Follow `references/query.md` — uses `alvera datasets search`
+to inspect data. Paginate results, summarize structure.
 
 ---
 

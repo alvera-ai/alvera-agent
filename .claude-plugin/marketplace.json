@@ -6,8 +6,8 @@
   "description": "Alvera platform plugins for agent-driven infrastructure setup.",
   "plugins": [
     {
-      "name": "platform-setup",
-      "source": "./plugins/platform-setup",
+      "name": "alvera-ai",
+      "source": "./plugins/alvera-ai",
       "description": "Conversational, guardrailed setup of Alvera platform resources via @alvera-ai/platform-sdk."
     }
   ]

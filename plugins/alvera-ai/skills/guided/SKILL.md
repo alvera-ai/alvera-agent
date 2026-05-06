@@ -28,47 +28,9 @@ the skill derives what's needed, checks what exists, and builds in order.
 - Skill: checks → datalake exists, data source exists, tool missing, workflow missing
 - Skill: provisions in order → tool → workflow → done
 
-## Prerequisites (in order)
-
-1. **`alvera` CLI reachable** — `alvera --version` or
-   `npx -p @alvera-ai/platform-sdk alvera --version`. If both fail, hand
-   the user `npm install -g @alvera-ai/platform-sdk` and stop.
-   See `references/cli-cheatsheet.md`.
-2. **Active session** — user runs `alvera login` themselves. Skill never
-   collects passwords. Verify with `alvera whoami`.
-3. **A datalake** — most resources are datalake-scoped. Offer to create if
-   none exists.
-
 ## Workflow
 
-### Step 1: Bootstrap
-
-Resolve CLI prefix, authenticate, connectivity check, pick datalake.
-
-Ask in a single prompt:
-1. Profile name (default `default`)
-2. Tenant slug
-3. Base URL (default `https://admin.alvera.ai`)
-4. Emit `infra.yaml` receipt? (default yes)
-
-Verify session (`alvera whoami`), connectivity (`alvera ping`), pick datalake
-(`alvera datalakes list`). If no datalake exists, offer to create one:
-
-1. **Provision Postgres via Neon** — use the Neon API to create a project
-   and get connection details in a single call. See
-   `references/neon-project.md` for the full API surface, response shape,
-   and mapping to Alvera datalake DB role fields. Requires `NEON_API_KEY`
-   env var. This is the preferred path — one API call returns host, port,
-   database, role, and password.
-2. **Create the datalake on Alvera** — pass the Neon connection details
-   into `alvera datalakes create` per `references/resources.md` → Datalake.
-   All four Alvera roles (regulated/unregulated × reader/writer) can reuse
-   the same Neon connection unless the user needs isolation.
-
-Session state to retain: `profile`, `tenantSlug`, `datalakeSlug`,
-`datalakeId`, `baseUrl`, receipt enabled, receipt path.
-
-### Step 2: Outcome elicitation
+### Step 1: Planning (outcome elicitation)
 
 Ask the user what they want to achieve — not what resource to create.
 
@@ -82,6 +44,49 @@ Match the outcome to a dependency chain using `references/outcomes.md`.
 If the outcome maps to a known chain, derive the plan. If the user names a
 specific resource directly, treat it as a single-resource outcome (minimal
 chain). If the outcome is ambiguous, ask one clarifying question and proceed.
+
+### Step 2: Bootstrap
+
+Resolve CLI prefix, authenticate, connectivity check, pick datalake.
+
+Ask in a single prompt:
+1. Profile name (default `default`)
+2. Tenant slug
+3. Base URL (default `https://admin.alvera.ai`)
+4. Emit `infra.yaml` receipt? (default yes)
+
+**CLI resolution** — `alvera --version` or
+`npx -p @alvera-ai/platform-sdk alvera --version`. If both fail, hand
+the user `npm install -g @alvera-ai/platform-sdk` and stop.
+See `references/cli-cheatsheet.md`.
+
+**Tool not set up** — if the user hasn't set up their Alvera platform
+account or tool yet, direct them to https://alvera.ai and stop.
+
+**Auth** — user runs `alvera login` themselves. Skill never collects
+passwords. Verify with `alvera whoami`.
+
+Verify connectivity (`alvera ping`), pick datalake
+(`alvera datalakes list`). If no datalake exists, offer to create one:
+
+**Option A: Use `alvera init infra-setup`** — generates a `.env` with all
+datalake fields (name, data domain, timezone, pool size, 4 DB roles, 2
+storage variants). Fill it out, then create the datalake from those values.
+
+**Option B: Provision Postgres via Neon** — use the Neon API to create a
+project and get connection details in a single call. See
+`references/neon-project.md` for the full API surface, response shape,
+and mapping to Alvera datalake DB role fields. Requires `NEON_API_KEY`
+env var. This is the preferred path — one API call returns host, port,
+database, role, and password.
+
+After obtaining connection details, create the datalake on Alvera via
+`alvera datalakes create` per `references/resources.md` → Datalake.
+All four Alvera roles (regulated/unregulated × reader/writer) can reuse
+the same Neon connection unless the user needs isolation.
+
+Session state to retain: `profile`, `tenantSlug`, `datalakeSlug`,
+`datalakeId`, `baseUrl`, receipt enabled, receipt path.
 
 ### Step 3: Gap analysis
 
@@ -127,7 +132,21 @@ Complex sub-flows handled inline:
 - **Workflow creation** (template or custom): follow `references/workflows.md`
   for template selection, custom build, draft creation, dry-run test, log
   interpretation, and promotion to live.
-- **Query scaffold**: follow `references/query.md` for PostgREST explorer.
+- **Query/inspect data**: follow `references/query.md` for dataset search.
+- **Connected app setup**: run `alvera init connected-app` to generate a
+  `.env` with `ALVERA_BASE_URL`, `ALVERA_TENANT`, `ALVERA_DATALAKE`, and
+  `ALVERA_CONNECTED_APP`. User fills values, app reads from env.
+
+**Fallback: `alvera raw`** — if a CLI command fails or the needed endpoint
+isn't wrapped by the SDK yet, use:
+
+```bash
+alvera raw <METHOD> <path> [--body <json>] [--body-file <path>] [--no-parse]
+```
+
+This sends an authenticated HTTP request directly. Use it to unblock
+provisioning when a specific command errors out — then report the raw
+response to the user.
 
 After the chain is complete, report what was created.
 
@@ -159,7 +178,7 @@ Read before any user interaction:
 ## CLI
 
 `alvera` from [`@alvera-ai/platform-sdk`](https://www.npmjs.com/package/@alvera-ai/platform-sdk)
-(>= 0.2.0). Two invocation forms:
+(>= 0.7.3). Two invocation forms:
 
 ```bash
 npx -p @alvera-ai/platform-sdk alvera <command>   # zero-install
@@ -168,6 +187,14 @@ alvera <command>                                    # if installed globally
 
 Auth is session-based, stored AWS-CLI-style under `~/.alvera-ai/`.
 User runs `alvera login` in their own shell. Skill never sees the password.
+
+Key commands beyond resource CRUD:
+
+```bash
+alvera init connected-app   # generate .env for app integration
+alvera init infra-setup     # generate .env for datalake infrastructure
+alvera raw <METHOD> <path>  # authenticated HTTP escape hatch
+```
 
 ## References
 
@@ -178,7 +205,7 @@ User runs `alvera login` in their own shell. Skill never sees the password.
 - `references/cli-cheatsheet.md` — CLI command surface
 - `references/data-pipeline.md` — file → table → template → upload flow
 - `references/workflows.md` — workflow templates, liquid variables, execution
-- `references/query.md` — PostgREST explorer scaffold templates
+- `references/query.md` — dataset search and inspection via SDK
 - `references/yaml-receipt.md` — emitted YAML schema and rules
 - `references/neon-project.md` — Neon API for Postgres provisioning (datalake DB backend)
 - `references/example-transcript.md` — reference end-to-end conversations

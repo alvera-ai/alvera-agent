@@ -15,7 +15,7 @@ alvera <command>                                    # if installed globally
 | `--profile <name>`   | Config profile (default `default`).             |
 
 Env var overrides: `ALVERA_PROFILE`, `ALVERA_BASE_URL`, `ALVERA_TENANT`,
-`ALVERA_EMAIL`, `ALVERA_PASSWORD`, `ALVERA_SESSION_TOKEN`.
+`ALVERA_EMAIL`, `ALVERA_SESSION_TOKEN`.
 
 ## Auth & session
 
@@ -131,6 +131,18 @@ alvera datasets metadata <dataset-type> [--datalake-id <id>] [--generic-table-id
 # MDM
 alvera mdm verify <datalake> [tenant]  --body '<json>' | --body-file <path>
 ```
+
+## Slug vs ID
+
+Some resources use slug for execution commands and ID for mutation commands:
+
+| Resource | Execution (slug) | Mutation (ID) |
+|----------|-----------------|---------------|
+| Workflows | `run`, `execute`, `workflow-logs`, `batch-logs` | `update`, `delete`, `get` |
+| DACs | `run-manually`, `ingest`, `ingest-file`, `logs` | `update`, `delete` |
+| Interop | `run`, `metadata` | `update`, `delete` |
+
+`create` returns both — store both values.
 
 ## Output and errors
 

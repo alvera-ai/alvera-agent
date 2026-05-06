@@ -186,13 +186,71 @@ Replace: `__SOURCE_URI__`, `__DEDUP_WINDOW__`, `__TOOL_ID__`, `__DELAY__`,
 If no connected app, remove `connected_app_id`, `connected_app_route`,
 `connected_app_metadata_template`, and `{{ connected_app_form_url }}` from SMS body.
 
-### Template B: Age-Aware Survey Workflow
+### Template B: Age-Aware Survey Workflow (CAHPS)
 
-Survey SMS to patients 65+ seven days after appointment. Adds: age gate,
-7-day delay, delivery window (7 AM - 7 PM), daily dedup.
+Survey SMS to patients 65+ one day after appointment. Adds: age gate,
+1-day delay, delivery window, daily dedup.
 
-Same structure as Template A with additional filter logic for age and
-action_window_start/end fields.
+Customisation points:
+
+| Field | Default | Ask |
+|-------|---------|-----|
+| `source_uri` | `emr.my-practice.com` | "What's your source_uri?" |
+| Age threshold | 65 | "Minimum age?" |
+| SMS delay | 1 day | "Change delay?" |
+| Dedup window | daily (today's date) | "Change dedup?" |
+| SMS body | Generic survey | "Customise SMS?" |
+| Connected app route | `/forms/cahps` | "Form route?" |
+| Action window | None | "Delivery hours?" |
+
+Full body:
+
+```json
+{
+  "name": "CAHPS Survey SMS Workflow",
+  "description": "Send CAHPS survey SMS to 65+ patients after appointment",
+  "dataset_type": "appointment",
+  "status": "draft",
+  "filter_config": {
+    "type": "custom",
+    "body": "{% if appointment.source_uri == \"__SOURCE_URI__\" %}{% assign patient_age = mdm_output.regulated_patient.birth_date | age %}{% if patient_age >= __AGE_THRESHOLD__ %}{% assign appt_date = appointment.start | date: \"%Y-%m-%d\" %}{% assign cutoff = \"\" | now | date: \"%Y-%m-%d\", \"subtract\", \"24 hours\" %}{% if appt_date >= cutoff %}true{% endif %}{% endif %}{% endif %}"
+  },
+  "decision_config": {
+    "type": "custom",
+    "body": "[\"send_cahps_survey\"]",
+    "output_schema": {"type": "array", "items": {"type": "string"}}
+  },
+  "actions": [
+    {
+      "decision_key": "send_cahps_survey",
+      "action_type": "sms",
+      "tool_id": "__TOOL_ID__",
+      "position": 0,
+      "trigger_template": "{{ appointment.start | date: \"%Y-%m-%d %H:%M:%S\", \"add\", \"__DELAY__\", timezone }}",
+      "idempotency_template": "{{ patient_id }}-{{ \"\" | now | date: \"%Y-%m-%d\" }}-{{ decision_key }}",
+      "runtime_filter": "{% assign phone = mdm_output.regulated_patient.telecom | where: \"system\", \"phone\" | map: \"value\" | first %}{% if phone and phone != \"\" %}{% if appointment.status == \"fulfilled\" or appointment.status == \"arrived\" or appointment.status == \"checked_in\" %}true{% endif %}{% endif %}",
+      "connected_app_id": "__CONNECTED_APP_ID__",
+      "connected_app_route": "__FORM_ROUTE__",
+      "connected_app_metadata_template": "{\"appointment_uuid\":\"{{ appointment.unregulated_appointment_id }}\",\"patient_uuid\":\"{{ mdm_output.patient.id }}\",\"patient_identifier\":\"{{ mdm_output.regulated_patient.identifier[0].value }}\",\"first_name\":\"{{ mdm_output.regulated_patient.name[0].given[0] }}\",\"last_name\":\"{{ mdm_output.regulated_patient.name[0].family }}\",\"location_name\":\"{{ appointment.location_participants[0].location.name }}\",\"phone\":\"{{ mdm_output.regulated_patient.telecom | where: \\\"system\\\", \\\"phone\\\" | map: \\\"value\\\" | first }}\"}",
+      "tool_call": {
+        "tool_call_type": "sms_request",
+        "to": {"type": "custom", "body": "{{ mdm_output.regulated_patient.telecom | where: \"system\", \"phone\" | map: \"value\" | first }}"},
+        "body": {"type": "custom", "body": "__SMS_BODY__"},
+        "sms_type": "transactional"
+      }
+    }
+  ]
+}
+```
+
+Replace: `__SOURCE_URI__`, `__AGE_THRESHOLD__`, `__TOOL_ID__`, `__DELAY__`,
+`__CONNECTED_APP_ID__`, `__FORM_ROUTE__`, `__SMS_BODY__`.
+
+Differences from Template A:
+- Filter includes age gate (`birth_date | age >= threshold`)
+- No context_datasets (no 6-month message dedup — uses daily idempotency instead)
+- Idempotency uses today's date (`{{ "" | now | date: "%Y-%m-%d" }}`) for daily dedup
+- Optional `action_window_start` / `action_window_end` (integer hours, e.g. 7 and 19 for 7 AM–7 PM)
 
 ### Template C: Minimal Workflow (scaffold)
 

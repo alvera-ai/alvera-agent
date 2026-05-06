@@ -28,7 +28,9 @@ Elicit in three passes.
 
 ### Pass 2 — DB topology
 
-Four role pairs × 5 connection fields each = 20 values. Ask up front:
+Four roles × 8 fields each (host, port, name, schema, auth_method,
+enable_ssl, user, pass) = up to 32 values. Ask these topology questions
+to reduce the total:
 
 1. Same host for regulated and unregulated? → reuse `host`/`port`.
 2. Reader/writer same connection, different credentials? Or separate?
@@ -49,8 +51,9 @@ Per-role fields (roles: `unregulated_db_writer`, `unregulated_db_reader`,
 
 ### Pass 3 — credentials (sensitive)
 
-For each role with `auth_method: password`, need `<role>_user` and
-`<role>_pass`. `iam_role` roles skip these.
+Elicit credentials in the same prompt as Pass 2 topology (not a separate
+interaction). For each role with `auth_method: password`, need
+`<role>_user` and `<role>_pass`. `iam_role` roles skip these.
 
 Three sourcing patterns (actively ask, see `guardrails.md`):
 - **(a) Existing env vars** — user gives names, skill uses `envsubst`.
@@ -171,7 +174,7 @@ Per column:
 | `name`               | **yes**  | —       |                                                     |
 | `model`              | **yes**  | —       | E.g. `claude-opus-4-6`, `gpt-4o`                    |
 | `tool_id`            | **yes**  | —       | Existing tool's id                                  |
-| `data_access`        | **yes**  | —       | `regulated \| unregulated` — ask explicitly         |
+| `data_access`        | **yes**  | `unregulated` | `regulated \| unregulated` — see guidance below |
 | `temperature`        | **yes**  | —       | `0..1`                                              |
 | `max_tokens`         | **yes**  | —       | Positive integer                                    |
 | `enabled`            | **yes**  | —       | Boolean                                             |
@@ -181,6 +184,12 @@ Per column:
 | `llm_response_schema`| no       | —       | JSON Schema                                         |
 | `prompt_config`      | no       | —       | Free-form object                                    |
 
+**`data_access` guidance:** Default to `unregulated`. AI agents process
+data through LLM providers — for compliance, they should only see
+de-identified (unregulated) data. Use `regulated` only if the agent
+explicitly needs PHI/PII access AND the user confirms their BAA covers
+LLM processing of regulated data.
+
 ---
 
 ## Connected app
@@ -189,10 +198,17 @@ Per column:
 
 Elicit `mode` first, then branch.
 
+- **`self_hosted`** — user hosts the app themselves and provides URLs.
+  This is the current default. Use when the user already has a deployed
+  frontend or is hosting their own forms/portal.
+- **`managed`** — Alvera deploys the app automatically via Cloudflare
+  Pages from a repo. Not yet available — if user asks, explain it's
+  coming and default to `self_hosted`.
+
 | Field                      | Required | Default | Notes                                        |
 |----------------------------|----------|---------|----------------------------------------------|
 | `name`                     | **yes**  | —       | Unique within datalake                       |
-| `mode`                     | **yes**  | —       | `managed \| self_hosted`                     |
+| `mode`                     | **yes**  | —       | `managed \| self_hosted` (default to `self_hosted`) |
 | `description`              | no       | —       |                                              |
 | `repo_url`                 | cond.    | —       | Required when `mode = managed`               |
 | `urls`                     | cond.    | `[]`    | ≥1 required when `mode = self_hosted`        |
@@ -271,6 +287,16 @@ Each action: `action_type`, `decision_key`, `tool_id`, `position`,
 
 `tool_call` discriminator: `sms_request`, `restapi_request`, `s3_request`,
 `aws_lambda_request`, `sftp_request`.
+
+### Slug vs ID usage
+
+| Operation | Identifier |
+|-----------|-----------|
+| `create` | returns both slug and ID |
+| `run` / `execute` / `workflow-logs` / `batch-logs` | use **slug** |
+| `update` / `delete` / `get` / `metadata` | use **ID** |
+
+Always store both after creation. Use slug for execution, ID for mutations.
 
 ### After create
 

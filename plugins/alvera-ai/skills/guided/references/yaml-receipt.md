@@ -9,9 +9,6 @@ successful create.
 tenant:
   slug: <tenant_slug_from_bootstrap>
 
-datalake:
-  slug: <datalake_slug_chosen_at_bootstrap>
-
 datalakes:
   - name: Prime Production
     slug: prime-prod

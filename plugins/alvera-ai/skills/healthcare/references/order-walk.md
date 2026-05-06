@@ -1,7 +1,7 @@
 # Healthcare order-walk — per-phase detail
 
 The 11 phases below mirror `integration-tests/tests/healthcare/_order.json`
-at `@alvera-ai/platform-sdk@0.7.2`. Each phase has the same shape:
+at `@alvera-ai/platform-sdk@0.8.0`. Each phase has the same shape:
 
 - **What** — the resource(s) provisioned in this phase
 - **Skill** — which primitive skill the orchestrator hands off to
@@ -132,7 +132,7 @@ The phase tags (`bootstrap`, `data-sources`, …) match the spec slugs in
 - **Skill.** `/DAC-upload` — single-row mode (NDJSON with one record).
 - **Elicit.** A single-row JSON file matching the DAC's source
   schema. If the user doesn't have one, point at
-  `tests/healthcare/fixtures/` in platform-sdk@v0.7.2 for a sample.
+  `tests/healthcare/fixtures/` in platform-sdk@v0.8.0 for a sample.
 - **Verify.** `pnpm test:healthcare -- run-dac-single`
 - **Notes.** Uses Oban + a worker pool — ingest is async. The skill
   should poll `data_activation_logs` until status is settled

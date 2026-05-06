@@ -3,7 +3,7 @@ name: healthcare
 description: >
   End-to-end provisioning of a healthcare host on Alvera, walking the canonical
   11-phase setup defined by `tests/healthcare/_order.json` in
-  `@alvera-ai/platform-sdk@0.7.2` (the executable contract). Each phase delegates
+  `@alvera-ai/platform-sdk@0.8.0` (the executable contract). Each phase delegates
   to a primitive skill (`guided`, `custom-dataset-creation`, `DAC-upload`,
   `agentic-workflow-creation`, `query-datasets`) and ends with a verification
   pointer back at the corresponding integration-tests spec, so the conversational
@@ -22,15 +22,15 @@ of synthetic fixtures.
 
 ## SDK pin
 
-This skill targets **`@alvera-ai/platform-sdk@0.7.2`** exactly. The walk
+This skill targets **`@alvera-ai/platform-sdk@0.8.0`** exactly. The walk
 below mirrors the manifest at that tag:
 
 ```
-https://github.com/alvera-ai/platform-sdk/blob/v0.7.2/integration-tests/tests/healthcare/_order.json
+https://github.com/alvera-ai/platform-sdk/blob/v0.8.0/integration-tests/tests/healthcare/_order.json
 ```
 
 If the user has a different SDK version installed, prompt to install
-`@alvera-ai/platform-sdk@0.7.2` before continuing — version drift breaks
+`@alvera-ai/platform-sdk@0.8.0` before continuing — version drift breaks
 the phase-to-spec mapping below.
 
 ## Prerequisites
@@ -66,8 +66,8 @@ loop.
 
 ## Workflow
 
-1. **Confirm SDK pin** — `alvera --version` should report `0.7.2`. If not,
-   install: `npm install -g @alvera-ai/platform-sdk@0.7.2` (or the user's
+1. **Confirm SDK pin** — `alvera --version` should report `0.8.0`. If not,
+   install: `npm install -g @alvera-ai/platform-sdk@0.8.0` (or the user's
    preferred package manager). Stop and ask if the user wants a different
    pin — the phase-to-spec mapping is tied to this exact tag.
 
@@ -76,7 +76,7 @@ loop.
 
    > "I'll walk you through the canonical healthcare host setup —
    > 11 phases, end-to-end, mirroring the `tests/healthcare/_order.json`
-   > sequence at platform-sdk@0.7.2. We can stop at any phase, skip
+   > sequence at platform-sdk@0.8.0. We can stop at any phase, skip
    > non-essential ones (invite-team is the obvious one), or pause and
    > resume later. Ready?"
 

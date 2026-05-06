@@ -11,10 +11,10 @@ and clarifications. Read this once to internalise the cadence; do
 
 **Skill:** Great. I'll walk you through 11 phases — same sequence the
 integration-tests suite runs against the dev stack at
-platform-sdk@0.7.2. Roughly 30-45 min if you have data on hand;
+platform-sdk@0.8.0. Roughly 30-45 min if you have data on hand;
 longer if we use the reference fixtures.
 
-First, the SDK version: `alvera --version` → ✅ reports 0.7.2.
+First, the SDK version: `alvera --version` → ✅ reports 0.8.0.
 
 Ready to start with phase 1 (bootstrap — tenant + datalake)?
 

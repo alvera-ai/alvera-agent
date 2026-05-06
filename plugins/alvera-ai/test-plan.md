@@ -7,15 +7,15 @@ test proves the hand-offs work.
 
 ## SDK pin
 
-This plan targets `@alvera-ai/platform-sdk@0.7.2` exactly. The phase
+This plan targets `@alvera-ai/platform-sdk@0.8.0` exactly. The phase
 sequence below mirrors `integration-tests/tests/healthcare/_order.json`
 at that tag. A different SDK version may have a different `_order.json`,
 in which case re-pin this plan and the domain skills together.
 
 ## Prerequisites
 
-- `alvera` CLI v0.7.2 installed (`alvera --version` reports `0.7.2`).
-  Install: `npm install -g @alvera-ai/platform-sdk@0.7.2`
+- `alvera` CLI v0.8.0 installed (`alvera --version` reports `0.8.0`).
+  Install: `npm install -g @alvera-ai/platform-sdk@0.8.0`
 - A tenant with valid credentials (`alvera login`)
 - Local platform running or access to staging
 - Python 3 available (for profiler scripts)

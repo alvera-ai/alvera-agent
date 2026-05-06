@@ -1,11 +1,11 @@
 # Healthcare reference fixtures
 
-The integration-tests at `@alvera-ai/platform-sdk@0.7.2` ship reference
+The integration-tests at `@alvera-ai/platform-sdk@0.8.0` ship reference
 fixtures that this skill can point at when the user doesn't have their
 own data ready. They are **synthetic** — never real PHI — and live at:
 
 ```
-https://github.com/alvera-ai/platform-sdk/tree/v0.7.2/integration-tests/tests/healthcare/fixtures
+https://github.com/alvera-ai/platform-sdk/tree/v0.8.0/integration-tests/tests/healthcare/fixtures
 ```
 
 ## When to use them vs the user's data
@@ -46,6 +46,6 @@ https://github.com/alvera-ai/platform-sdk/tree/v0.7.2/integration-tests/tests/he
 
 ## Pin discipline
 
-These fixtures are pinned to **v0.7.2** alongside this skill. If the
+These fixtures are pinned to **v0.8.0** alongside this skill. If the
 user's local checkout is on a different SDK version, the fixture paths
 or contents may have shifted — re-pin or surface the drift.

@@ -3,7 +3,7 @@ name: payment-risk
 description: >
   End-to-end provisioning of a payment-risk host on Alvera. Currently a STUB —
   the canonical setup walk lives in `tests/payment_risk/_order.json` at
-  `@alvera-ai/platform-sdk@0.7.2`, which today contains only a smoke spec
+  `@alvera-ai/platform-sdk@0.8.0`, which today contains only a smoke spec
   because the payment-risk industry is not yet productionised. Use this skill
   to get a stub setup conversation that lists payment-risk-specific resource
   types and routes to `/guided` for ad-hoc creation. Real domain orchestration
@@ -16,17 +16,17 @@ description: >
 
 End-to-end domain orchestrator for payment-risk (KYC, AML, fraud).
 **Currently a stub.** The integration-tests suite at
-`@alvera-ai/platform-sdk@0.7.2` includes only a smoke spec for
+`@alvera-ai/platform-sdk@0.8.0` includes only a smoke spec for
 `tests/payment_risk/`; a real phase-by-phase walk will land here once
 the payment-risk domain has full integration coverage.
 
 ## SDK pin
 
-This skill targets **`@alvera-ai/platform-sdk@0.7.2`** exactly, matching
+This skill targets **`@alvera-ai/platform-sdk@0.8.0`** exactly, matching
 the rest of the domain skills. Payment-risk manifest:
 
 ```
-https://github.com/alvera-ai/platform-sdk/blob/v0.7.2/integration-tests/tests/payment_risk/_order.json
+https://github.com/alvera-ai/platform-sdk/blob/v0.8.0/integration-tests/tests/payment_risk/_order.json
 ```
 
 Currently `["smoke"]`. When real specs land, this skill will be expanded
@@ -43,8 +43,8 @@ that the healthcare skill provides.
 
 ## Workflow
 
-1. **Confirm SDK pin.** `alvera --version` should report `0.7.2`. If
-   not, install `@alvera-ai/platform-sdk@0.7.2`.
+1. **Confirm SDK pin.** `alvera --version` should report `0.8.0`. If
+   not, install `@alvera-ai/platform-sdk@0.8.0`.
 2. **Set expectations explicitly.** Tell the user this is a stub —
    they're getting `/guided` with payment-risk-flavoured suggestions,
    not the full canonical walk that healthcare gets. If they need a

@@ -40,3 +40,19 @@ alvera datasets metadata <dataset-type> [--datalake-id <id>] [--generic-table-id
   unless the user explicitly asks.
 - **Pagination over bulk.** Never fetch all rows at once. Default page size
   is 20; increase only if the user requests it.
+
+## Post-provisioning monitoring
+
+After provisioning, use these commands to verify things are working:
+
+| What to check | Command |
+|---------------|---------|
+| Data landed after DAC ingest | `alvera datasets search <dataset> --datalake-id <id>` |
+| DAC processing status | `alvera data-activation-clients logs <datalake> <slug>` |
+| Workflow execution history | `alvera workflows workflow-logs <slug>` |
+| Batch run status | `alvera workflows batch-logs <slug>` |
+| Patient identity resolution | `alvera mdm verify <datalake> --body '<json>'` |
+| Platform health | `alvera ping` |
+
+For workflow debugging, see `references/workflows.md` → "Debugging
+common issues" and `references/errors.md` for error recovery.

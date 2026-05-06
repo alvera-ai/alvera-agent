@@ -1,0 +1,43 @@
+{
+  "name": "Review SMS Workflow",
+  "description": "Send review SMS after appointment, with recency + source_uri filter",
+  "dataset_type": "appointment",
+  "status": "draft",
+  "filter_config": {
+    "type": "custom",
+    "body": "{% if appointment.source_uri == \"__SOURCE_URI__\" %}{% assign appt_date = appointment.start | date: \"%Y-%m-%d\" %}{% assign cutoff = \"\" | now | date: \"%Y-%m-%d\", \"subtract\", \"24 hours\" %}{% if appt_date >= cutoff %}true{% endif %}{% endif %}"
+  },
+  "decision_config": {
+    "type": "custom",
+    "body": "[\"send_appointment_review_sms\"]",
+    "output_schema": {"type": "array", "items": {"type": "string"}}
+  },
+  "context_datasets": [
+    {
+      "dataset_type": "message",
+      "where_clause": "rm.patient_id = '{{ patient_id }}' AND rm.decision_key = 'send_appointment_review_sms' AND rm.sent_at > NOW() - INTERVAL '__DEDUP_WINDOW__'",
+      "limit": 1,
+      "position": 0
+    }
+  ],
+  "actions": [
+    {
+      "decision_key": "send_appointment_review_sms",
+      "action_type": "sms",
+      "tool_id": "__TOOL_ID__",
+      "position": 0,
+      "trigger_template": "{{ appointment.start | date: \"%Y-%m-%d %H:%M:%S\", \"add\", \"__DELAY__\", timezone }}",
+      "idempotency_template": "{{ patient_id }}-{{ appointment.unregulated_appointment_id }}-{{ decision_key }}",
+      "runtime_filter": "{% assign phone = mdm_output.regulated_patient.telecom | where: \"system\", \"phone\" | map: \"value\" | first %}{% if phone and phone != \"\" %}{% if additional_context.message.size == 0 %}{% if appointment.status == \"fulfilled\" or appointment.status == \"arrived\" or appointment.status == \"checked_in\" %}true{% endif %}{% endif %}{% endif %}",
+      "connected_app_id": "__CONNECTED_APP_ID__",
+      "connected_app_route": "__FORM_ROUTE__",
+      "connected_app_metadata_template": "{\"appointment_uuid\":\"{{ appointment.unregulated_appointment_id }}\",\"patient_uuid\":\"{{ mdm_output.patient.id }}\",\"patient_identifier\":\"{{ mdm_output.regulated_patient.identifier[0].value }}\",\"first_name\":\"{{ mdm_output.regulated_patient.name[0].given[0] }}\",\"last_name\":\"{{ mdm_output.regulated_patient.name[0].family }}\",\"location_name\":\"{{ appointment.location_participants[0].location.name }}\"}",
+      "tool_call": {
+        "tool_call_type": "sms_request",
+        "to": {"type": "custom", "body": "{{ mdm_output.regulated_patient.telecom | where: \"system\", \"phone\" | map: \"value\" | first }}"},
+        "body": {"type": "custom", "body": "__SMS_BODY__"},
+        "sms_type": "transactional"
+      }
+    }
+  ]
+}

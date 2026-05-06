@@ -1,7 +1,8 @@
 # YAML receipt
 
-If the user opted in at bootstrap, append to `./infra.yaml` after each
-successful create.
+Always emit. Append to `./alvera-<tenant-slug>.yaml` after each
+successful create. The filename includes the tenant slug so multiple
+tenants produce separate receipts.
 
 ## Shape
 
@@ -74,3 +75,5 @@ data_activation_clients: []
   supplied a literal, write `<set at runtime>`.
 - The YAML is a **receipt**, not a config file. The API is the source
   of truth. When the user asks "what do I have?", call `list` endpoints.
+- **Filename convention:** `alvera-<tenant-slug>.yaml`. If tenant slug
+  is `acme-health`, the file is `alvera-acme-health.yaml`.

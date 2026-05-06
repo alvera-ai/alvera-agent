@@ -97,7 +97,7 @@ alvera --profile <p> workflows update <datalake> <id> [tenant] \
 Change `status` from `draft` to `live`. Confirm:
 > "This will make the workflow respond to automated events. Promote to live? (y/n)"
 
-Append to `infra.yaml` under `agentic_workflows:`.
+Append to `alvera-<tenant-slug>.yaml` under `agentic_workflows:`.
 
 ## Hard constraints
 
@@ -132,53 +132,7 @@ Customisation points:
 | Connected app route | `/forms/review` | "Form route?" |
 | Action window | None | "Delivery hours?" |
 
-Full body:
-
-```json
-{
-  "name": "Review SMS Workflow",
-  "description": "Send review SMS after appointment, with recency + source_uri filter",
-  "dataset_type": "appointment",
-  "status": "draft",
-  "filter_config": {
-    "type": "custom",
-    "body": "{% if appointment.source_uri == \"__SOURCE_URI__\" %}{% assign appt_date = appointment.start | date: \"%Y-%m-%d\" %}{% assign cutoff = \"\" | now | date: \"%Y-%m-%d\", \"subtract\", \"24 hours\" %}{% if appt_date >= cutoff %}true{% endif %}{% endif %}"
-  },
-  "decision_config": {
-    "type": "custom",
-    "body": "[\"send_appointment_review_sms\"]",
-    "output_schema": {"type": "array", "items": {"type": "string"}}
-  },
-  "context_datasets": [
-    {
-      "dataset_type": "message",
-      "where_clause": "rm.patient_id = '{{ patient_id }}' AND rm.decision_key = 'send_appointment_review_sms' AND rm.sent_at > NOW() - INTERVAL '__DEDUP_WINDOW__'",
-      "limit": 1,
-      "position": 0
-    }
-  ],
-  "actions": [
-    {
-      "decision_key": "send_appointment_review_sms",
-      "action_type": "sms",
-      "tool_id": "__TOOL_ID__",
-      "position": 0,
-      "trigger_template": "{{ appointment.start | date: \"%Y-%m-%d %H:%M:%S\", \"add\", \"__DELAY__\", timezone }}",
-      "idempotency_template": "{{ patient_id }}-{{ appointment.unregulated_appointment_id }}-{{ decision_key }}",
-      "runtime_filter": "{% assign phone = mdm_output.regulated_patient.telecom | where: \"system\", \"phone\" | map: \"value\" | first %}{% if phone and phone != \"\" %}{% if additional_context.message.size == 0 %}{% if appointment.status == \"fulfilled\" or appointment.status == \"arrived\" or appointment.status == \"checked_in\" %}true{% endif %}{% endif %}{% endif %}",
-      "connected_app_id": "__CONNECTED_APP_ID__",
-      "connected_app_route": "__FORM_ROUTE__",
-      "connected_app_metadata_template": "{\"appointment_uuid\":\"{{ appointment.unregulated_appointment_id }}\",\"patient_uuid\":\"{{ mdm_output.patient.id }}\",\"patient_identifier\":\"{{ mdm_output.regulated_patient.identifier[0].value }}\",\"first_name\":\"{{ mdm_output.regulated_patient.name[0].given[0] }}\",\"last_name\":\"{{ mdm_output.regulated_patient.name[0].family }}\",\"location_name\":\"{{ appointment.location_participants[0].location.name }}\"}",
-      "tool_call": {
-        "tool_call_type": "sms_request",
-        "to": {"type": "custom", "body": "{{ mdm_output.regulated_patient.telecom | where: \"system\", \"phone\" | map: \"value\" | first }}"},
-        "body": {"type": "custom", "body": "__SMS_BODY__"},
-        "sms_type": "transactional"
-      }
-    }
-  ]
-}
-```
+Full body: read `templates/review-sms.json`.
 
 Replace: `__SOURCE_URI__`, `__DEDUP_WINDOW__`, `__TOOL_ID__`, `__DELAY__`,
 `__CONNECTED_APP_ID__`, `__FORM_ROUTE__`, `__SMS_BODY__`.
@@ -203,45 +157,7 @@ Customisation points:
 | Connected app route | `/forms/cahps` | "Form route?" |
 | Action window | None | "Delivery hours?" |
 
-Full body:
-
-```json
-{
-  "name": "CAHPS Survey SMS Workflow",
-  "description": "Send CAHPS survey SMS to 65+ patients after appointment",
-  "dataset_type": "appointment",
-  "status": "draft",
-  "filter_config": {
-    "type": "custom",
-    "body": "{% if appointment.source_uri == \"__SOURCE_URI__\" %}{% assign patient_age = mdm_output.regulated_patient.birth_date | age %}{% if patient_age >= __AGE_THRESHOLD__ %}{% assign appt_date = appointment.start | date: \"%Y-%m-%d\" %}{% assign cutoff = \"\" | now | date: \"%Y-%m-%d\", \"subtract\", \"24 hours\" %}{% if appt_date >= cutoff %}true{% endif %}{% endif %}{% endif %}"
-  },
-  "decision_config": {
-    "type": "custom",
-    "body": "[\"send_cahps_survey\"]",
-    "output_schema": {"type": "array", "items": {"type": "string"}}
-  },
-  "actions": [
-    {
-      "decision_key": "send_cahps_survey",
-      "action_type": "sms",
-      "tool_id": "__TOOL_ID__",
-      "position": 0,
-      "trigger_template": "{{ appointment.start | date: \"%Y-%m-%d %H:%M:%S\", \"add\", \"__DELAY__\", timezone }}",
-      "idempotency_template": "{{ patient_id }}-{{ \"\" | now | date: \"%Y-%m-%d\" }}-{{ decision_key }}",
-      "runtime_filter": "{% assign phone = mdm_output.regulated_patient.telecom | where: \"system\", \"phone\" | map: \"value\" | first %}{% if phone and phone != \"\" %}{% if appointment.status == \"fulfilled\" or appointment.status == \"arrived\" or appointment.status == \"checked_in\" %}true{% endif %}{% endif %}",
-      "connected_app_id": "__CONNECTED_APP_ID__",
-      "connected_app_route": "__FORM_ROUTE__",
-      "connected_app_metadata_template": "{\"appointment_uuid\":\"{{ appointment.unregulated_appointment_id }}\",\"patient_uuid\":\"{{ mdm_output.patient.id }}\",\"patient_identifier\":\"{{ mdm_output.regulated_patient.identifier[0].value }}\",\"first_name\":\"{{ mdm_output.regulated_patient.name[0].given[0] }}\",\"last_name\":\"{{ mdm_output.regulated_patient.name[0].family }}\",\"location_name\":\"{{ appointment.location_participants[0].location.name }}\",\"phone\":\"{{ mdm_output.regulated_patient.telecom | where: \\\"system\\\", \\\"phone\\\" | map: \\\"value\\\" | first }}\"}",
-      "tool_call": {
-        "tool_call_type": "sms_request",
-        "to": {"type": "custom", "body": "{{ mdm_output.regulated_patient.telecom | where: \"system\", \"phone\" | map: \"value\" | first }}"},
-        "body": {"type": "custom", "body": "__SMS_BODY__"},
-        "sms_type": "transactional"
-      }
-    }
-  ]
-}
-```
+Full body: read `templates/cahps-survey.json`.
 
 Replace: `__SOURCE_URI__`, `__AGE_THRESHOLD__`, `__TOOL_ID__`, `__DELAY__`,
 `__CONNECTED_APP_ID__`, `__FORM_ROUTE__`, `__SMS_BODY__`.
@@ -254,32 +170,39 @@ Differences from Template A:
 
 ### Template C: Minimal Workflow (scaffold)
 
-Starting point for custom workflows:
-
-```json
-{
-  "name": "__NAME__",
-  "description": "__DESCRIPTION__",
-  "dataset_type": "__DATASET_TYPE__",
-  "status": "draft",
-  "actions": [
-    {
-      "decision_key": "__DECISION_KEY__",
-      "action_type": "__ACTION_TYPE__",
-      "tool_id": "__TOOL_ID__",
-      "position": 0,
-      "trigger_template": "now",
-      "idempotency_template": "{{ checksum }}-{{ action_id }}",
-      "tool_call": {
-        "tool_call_type": "__TOOL_CALL_TYPE__"
-      }
-    }
-  ]
-}
-```
+Starting point for custom workflows. Read `templates/minimal-scaffold.json`.
 
 Tool call types: `sms_request`, `restapi_request`, `s3_request`,
 `aws_lambda_request`, `sftp_request`.
+
+### Generic table workflows
+
+When `dataset_type` is `generic_table`, the workflow fires on rows
+inserted into a custom table. Additional requirements:
+
+- `generic_table_id` is **required** in the workflow body.
+- Filter and action templates use `generic_table_row.*` instead of
+  `appointment.*` or `patient.*`.
+- MDM output may not be available unless the table contains patient
+  identifiers that can be resolved.
+- Idempotency template should reference the table's unique column(s):
+  `{{ generic_table_row.<unique_col> }}-{{ decision_key }}`.
+
+Use Template C as the starting point. No production template exists for
+generic table workflows — build custom via elicitation passes.
+
+## Dataset types
+
+Valid `dataset_type` values for workflows:
+
+| Type | Event source | Primary variables |
+|------|-------------|-------------------|
+| `patient` | Patient record events | `patient.*`, `mdm_output.*` |
+| `appointment` | Appointment events | `appointment.*`, `patient.*`, `mdm_output.*` |
+| `generic_table` | Custom table inserts (requires `generic_table_id`) | `generic_table_row.*` |
+
+If unsure which types are available, use `alvera workflows metadata`
+to discover them — the API is authoritative.
 
 ---
 

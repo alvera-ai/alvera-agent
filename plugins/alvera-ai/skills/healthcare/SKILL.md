@@ -88,7 +88,7 @@ loop.
    - On return, confirm the resource landed (one CLI list call) and
      point at the integration-tests spec as the executable check the
      user can run themselves: `pnpm test:healthcare -- <spec-name>`.
-   - Append to `infra.yaml` if the receipt is enabled.
+   - Append to `alvera-<tenant-slug>.yaml` if the receipt is enabled.
 
 4. **Stop on first failure.** If any phase fails (4xx, missing
    prerequisite, validation error), do NOT skip to the next phase —

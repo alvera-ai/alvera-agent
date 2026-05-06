@@ -130,7 +130,28 @@ alvera datasets metadata <dataset-type> [--datalake-id <id>] [--generic-table-id
 
 # MDM
 alvera mdm verify <datalake> [tenant]  --body '<json>' | --body-file <path>
+
+# Init (scaffolding)
+alvera init connected-app              # generate .env for app integration
+alvera init infra-setup                # generate .env for datalake infrastructure
 ```
+
+## Batch operations (workflows)
+
+Batch operations manage long-running bulk workflow executions:
+
+```bash
+alvera workflows batch-logs          <workflow-slug> [tenant]       # list batch runs
+alvera workflows batch-log           <workflow-slug> <id> [tenant]  # get batch details
+alvera workflows batch-log-start     <workflow-slug> <id> [tenant]  # resume a paused batch
+alvera workflows batch-log-stop      <workflow-slug> <id> [tenant]  # pause a running batch
+alvera workflows batch-log-refresh   <workflow-slug> <id> [tenant]  # refresh batch status
+```
+
+Use `batch-logs` to monitor bulk `run` executions. Each batch has a
+lifecycle: `running` → `completed` | `stopped` | `failed`. Use
+`batch-log-stop` to pause a problematic batch, `batch-log-start` to
+resume after fixing.
 
 ## Slug vs ID
 

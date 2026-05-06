@@ -142,7 +142,7 @@ both workflows active.
 
 1. Run `pnpm test:healthcare` end-to-end as a regression check —
    should be 11/72 green.
-2. `infra.yaml` is at `./infra.yaml` — under version control will
+2. `alvera-<tenant-slug>.yaml` is at `./alvera-<tenant-slug>.yaml` — under version control will
    give you a reproducible record of what was provisioned.
 3. For row-level verification of the data that landed, invoke
    `/query-datasets` — it scaffolds a local PostgREST explorer.

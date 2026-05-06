@@ -192,7 +192,7 @@ The setup is complete. Next steps the orchestrator should mention:
 - `/query-datasets` to verify rows landed in the datalake
 - The full `pnpm test:healthcare` suite to re-run all 11 phases as
   one regression check
-- `infra.yaml` (if the receipt was enabled) is the reproducible
+- `alvera-<tenant-slug>.yaml` (if the receipt was enabled) is the reproducible
   artefact of what was provisioned — keep it under version control
 
 If the user wants to skip ahead to a different domain, point them

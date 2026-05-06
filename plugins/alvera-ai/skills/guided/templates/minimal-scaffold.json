@@ -1,0 +1,19 @@
+{
+  "name": "__NAME__",
+  "description": "__DESCRIPTION__",
+  "dataset_type": "__DATASET_TYPE__",
+  "status": "draft",
+  "actions": [
+    {
+      "decision_key": "__DECISION_KEY__",
+      "action_type": "__ACTION_TYPE__",
+      "tool_id": "__TOOL_ID__",
+      "position": 0,
+      "trigger_template": "now",
+      "idempotency_template": "{{ checksum }}-{{ action_id }}",
+      "tool_call": {
+        "tool_call_type": "__TOOL_CALL_TYPE__"
+      }
+    }
+  ]
+}

@@ -11,7 +11,6 @@ AGENT: Before we start, I need:
   1. Profile name — default `default`
   2. Tenant slug
   3. Base URL — default https://admin.alvera.ai
-  4. Emit infra.yaml receipt? (default yes)
 
 USER: defaults for everything, tenant=acme
 
@@ -77,7 +76,7 @@ USER: env vars: AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,
 
 AGENT: [runs: alvera --profile default tools create acme --body-file /tmp/tool.json]
        Created tool **Acme SMS** (id: 9b2e-...).
-       Appended to infra.yaml.
+       Appended to alvera-<tenant-slug>.yaml.
 
        Now building the **Review SMS Workflow**.
 
@@ -106,7 +105,7 @@ USER: y
 AGENT: [runs: alvera --profile default workflows create acme-health acme
               --body-file /tmp/workflow.json]
        Created workflow **Review SMS Workflow** (slug: review-sms-workflow, status: draft).
-       Appended to infra.yaml.
+       Appended to alvera-<tenant-slug>.yaml.
 
        Running dry-run test...
        [runs: alvera --profile default workflows run review-sms-workflow acme
@@ -172,7 +171,7 @@ USER: y
 AGENT: [runs: alvera generic-tables list acme-health acme] No collision.
        [creates table]
        Created generic table **patients** (id: 7f3a-...).
-       Appended to infra.yaml.
+       Appended to alvera-<tenant-slug>.yaml.
 
        Now I'll set up the data pipeline to upload the file.
        Anti-pattern scan results:

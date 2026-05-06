@@ -116,6 +116,7 @@ Before `update`:
 
 CLI exits non-zero on any failure. Surface stderr verbatim.
 Do not invent fallbacks. Do not retry without asking. Do not swallow.
+See `references/errors.md` for the full error catalog.
 
 **Recovery pattern:** When a command fails:
 1. Show the error to the user verbatim.
@@ -126,3 +127,27 @@ Do not invent fallbacks. Do not retry without asking. Do not swallow.
    - 5xx → "Server error. Try `alvera raw GET <path>` to verify, or retry?"
    - Timeout → "Request timed out. Retry? (y/n)"
 4. If the user says retry, re-run the exact same command once.
+
+## Partial chain failures
+
+When a multi-resource provisioning chain fails midway:
+
+1. **Don't clean up automatically.** Successfully created resources are valid.
+2. **Surface what succeeded and what failed.** Show the exact error.
+3. **Retry from the failed step** — not from the beginning.
+4. **If the user wants to abandon,** ask whether to delete the orphaned
+   resources or leave them for later use.
+
+Never silently skip a failed resource. Never continue to the next
+resource in the chain — subsequent resources depend on prior ones.
+
+## Updates
+
+Before updating any resource, read `references/updates.md` for
+per-resource mutability rules. Key constraints:
+
+- Generic table columns and `privacy_requirement` are **locked at creation**.
+- Tool `intent` and `datalake_id` are **locked at creation**.
+- Workflow `dataset_type` and `generic_table_id` are **locked at creation**.
+- Workflows and interop contracts use **PUT = full replace** — always
+  send the complete body.

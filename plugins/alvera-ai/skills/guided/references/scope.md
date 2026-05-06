@@ -11,12 +11,13 @@
 | `actionStatusUpdaters`  | list, create, update                        |
 | `aiAgents`              | list, get, create, update, delete           |
 | `connectedApps`         | list, get, create, update, syncRoutes       |
-| `agenticWorkflows`      | list, get, create, update, delete, execute, run |
+| `agenticWorkflows`      | list, get, create, update, delete, execute, run, batch-logs |
 | `interopContracts`      | list, get, create, update, delete, run      |
-| `dataActivationClients` | list, get, create, update, delete, run-manually, ingest, ingest-file |
+| `dataActivationClients` | list, get, create, update, delete, run-manually, ingest, ingest-file, logs |
 | `datasets`              | search, metadata (read-only monitoring)     |
 | `mdm`                   | verify (read-only identity resolution)      |
 | `ping`                  | health check                                |
+| `init`                  | `connected-app`, `infra-setup` (scaffolding)|
 
 ## Out of scope (refuse)
 
@@ -27,8 +28,26 @@
   `connected-apps update-message-tracking` are runtime page rendering,
   not provisioning. CRUD + `sync-routes` on connected app resources are in
   scope; page-level endpoints are not.
+- **Invite / team management** — team invites are a domain-specific
+  concern handled by the `/healthcare` skill's phase walk, not a general
+  provisioning operation. Not available via `/guided`.
 - Anything touching another tenant
 - Anything not listed in "In scope"
+
+## MDM verify
+
+`alvera mdm verify <datalake> [tenant] --body '<json>'` resolves a
+patient identity against the master data model. Body:
+
+```json
+{
+  "resource_type": "patient",
+  "identifier": [{"system": "urn:emr:patient-id", "value": "<patient_id>"}]
+}
+```
+
+Response contains the resolved patient record (regulated + unregulated
+views). Use to verify patient data landed correctly after DAC ingestion.
 
 ## Refusal language
 

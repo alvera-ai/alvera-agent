@@ -12,7 +12,7 @@ description: >
   activation clients, file ingestion (anti-pattern detection, Liquid template
   generation, sandbox testing), and PostgREST explorer scaffolding. Drives
   the `alvera` CLI from `@alvera-ai/platform-sdk`. Auth is session-based —
-  the user runs `alvera login` themselves. Emits an `infra.yaml` receipt.
+  the user runs `alvera login` themselves. Emits an `alvera-<tenant-slug>.yaml` receipt.
   Use when the user says anything about setting up, provisioning, onboarding,
   creating, or configuring Alvera platform resources.
 ---
@@ -54,7 +54,7 @@ Ask in a single prompt:
 2. Tenant slug
 3. Base URL (default `https://admin.alvera.ai`)
 
-Receipt: always emit `infra.yaml` — don't ask.
+Receipt: always emit `alvera-<tenant-slug>.yaml` (e.g. `alvera-acme-health.yaml`) — don't ask.
 
 **CLI resolution** — `alvera --version` or
 `npx -p @alvera-ai/platform-sdk alvera --version`. If both fail, hand
@@ -126,7 +126,7 @@ Provision resources in dependency order. For each:
 2. **Elicit** missing fields per `references/resources.md`.
 3. **Confirm** in plain language (bullets, not JSON).
 4. **Create** via CLI (`references/cli-cheatsheet.md`).
-5. **Append** to `infra.yaml` if receipt enabled (`references/yaml-receipt.md`).
+5. **Append** to `alvera-<tenant-slug>.yaml` if receipt enabled (`references/yaml-receipt.md`).
 6. **Move** to next resource in the chain.
 
 Complex sub-flows handled inline:
@@ -185,12 +185,21 @@ Don't present long menus when one path is obvious.
 
 ## Hard constraints
 
-Read before any user interaction:
+Read on first user interaction:
 
 - `references/scope.md` — what is in/out of scope, with refusal language.
+
+Read on first create or update:
+
 - `references/guardrails.md` — non-negotiable rules: no silent upsert,
   destructive confirmations, secrets handling, dependency ordering,
-  read-before-write for updates.
+  read-before-write for updates, partial chain failure recovery.
+- `references/updates.md` — per-resource mutability rules (which fields
+  are locked at creation).
+
+Read on errors:
+
+- `references/errors.md` — error catalog with causes and recovery steps.
 
 ## CLI
 
@@ -217,12 +226,19 @@ alvera raw <METHOD> <path>  # authenticated HTTP escape hatch
 
 - `references/outcomes.md` — outcome → dependency chain catalog
 - `references/resources.md` — per-resource field elicitation rules
+- `references/updates.md` — per-resource mutability rules for updates
 - `references/guardrails.md` — non-negotiable rules
+- `references/errors.md` — error catalog with causes and recovery steps
 - `references/scope.md` — allowed/refused operations
-- `references/cli-cheatsheet.md` — CLI command surface
+- `references/cli-cheatsheet.md` — CLI command surface (incl. batch ops, init)
 - `references/data-pipeline.md` — file → table → template → upload flow
 - `references/workflows.md` — workflow templates, liquid variables, execution
-- `references/query.md` — dataset search and inspection via SDK
+- `references/query.md` — dataset search, inspection, and post-provisioning monitoring
 - `references/yaml-receipt.md` — emitted YAML schema and rules
 - `references/neon-project.md` — Neon API for Postgres provisioning (datalake DB backend)
 - `references/example-transcript.md` — reference end-to-end conversations
+- `scripts/alvera-profile.py` — column profiling script (used by data-pipeline)
+- `scripts/alvera-scan.py` — anti-pattern scanner script (used by data-pipeline)
+- `templates/review-sms.json` — Template A: Review SMS Workflow body
+- `templates/cahps-survey.json` — Template B: CAHPS Survey Workflow body
+- `templates/minimal-scaffold.json` — Template C: minimal workflow scaffold

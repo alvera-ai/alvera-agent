@@ -196,23 +196,14 @@ LLM processing of regulated data.
 
 `alvera connected-apps create <datalake> [tenant] --body-file <path>`
 
-Elicit `mode` first, then branch.
-
-- **`self_hosted`** — user hosts the app themselves and provides URLs.
-  This is the current default. Use when the user already has a deployed
-  frontend or is hosting their own forms/portal.
-- **`managed`** — Alvera deploys the app automatically via Cloudflare
-  Pages from a repo. Not yet available — if user asks, explain it's
-  coming and default to `self_hosted`.
+Mode is `self_hosted` — user hosts the app and provides URLs.
 
 | Field                      | Required | Default | Notes                                        |
 |----------------------------|----------|---------|----------------------------------------------|
 | `name`                     | **yes**  | —       | Unique within datalake                       |
-| `mode`                     | **yes**  | —       | `managed \| self_hosted` (default to `self_hosted`) |
+| `mode`                     | **yes**  | —       | `self_hosted`                                |
 | `description`              | no       | —       |                                              |
-| `repo_url`                 | cond.    | —       | Required when `mode = managed`               |
-| `urls`                     | cond.    | `[]`    | ≥1 required when `mode = self_hosted`        |
-| `cloudflare_pages_config`  | cond.    | —       | Required when `mode = managed`               |
+| `urls`                     | **yes**  | `[]`    | ≥1 required                                  |
 
 ### `urls[]` shape
 
@@ -221,18 +212,6 @@ Elicit `mode` first, then branch.
 | `url`        | **yes**  | —       | `http://` or `https://`      |
 | `is_primary` | no       | `false` | Exactly one should be primary |
 | `label`      | no       | —       |                              |
-
-### `cloudflare_pages_config` (managed)
-
-| Field                  | Required | Default  | Notes                                  |
-|------------------------|----------|----------|----------------------------------------|
-| `account_id`           | **yes**  | —        |                                        |
-| `api_token`            | **yes**  | —        | **Secret** (env var name preferred)    |
-| `github_auth_method`   | **yes**  | —        | `github_app \| pat`                    |
-| `github_pat`           | cond.    | —        | Required when `pat`. **Secret.**       |
-| `production_branch`    | no       | `main`   |                                        |
-| `build_command`        | no       | —        |                                        |
-| `destination_dir`      | no       | —        |                                        |
 
 ### `sync-routes`
 
@@ -302,7 +281,7 @@ Always store both after creation. Use slug for execution, ID for mutations.
 
 - Offer dry-run: `alvera workflows run <slug> --body '{"sql_where_clause":"1=1 LIMIT 1","mode":"dry_run"}'`.
 - Promote to live on user confirmation.
-- Append to `infra.yaml`.
+- Append to `alvera-<tenant-slug>.yaml`.
 
 ---
 

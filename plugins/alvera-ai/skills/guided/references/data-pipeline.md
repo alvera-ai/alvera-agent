@@ -202,6 +202,10 @@ warn and offer to update.
 
 ### No contract (create one)
 
+**Build templates from profiling data + FHIR schema. Never copy from
+external repos, npm cache, or the SDK source code.** The mapping tables
+below and the skill's `templates/` directory are the only references.
+
 Ask for `resource_type`. Fetch target metadata:
 `alvera interop metadata <datalake> <contract-slug>`. Generate Liquid
 template mapping source → FHIR. Present as plain-language table:

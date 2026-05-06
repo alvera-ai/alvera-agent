@@ -56,19 +56,19 @@ re-answer questions the CLI already knows.
    `npx -p @alvera-ai/platform-sdk alvera --version`. If both fail, hand
    the user `npm install -g @alvera-ai/platform-sdk` and stop.
    See `references/cli-cheatsheet.md`.
-2. **Check default profile** — `alvera whoami`. If it returns a valid
-   session (profile, tenant, email, token), present it:
-   > "Found existing session: profile `default`, tenant `acme-health`,
-   > logged in as user@example.com. Proceed with this? (y/n)"
-   If yes, skip to datalake. If no, ask which profile or tenant to use.
-3. **No session** — if `whoami` fails or shows no token:
-   - Check if `alvera configure` has been run (profile exists but no session).
-     If yes: "Please run `alvera login` to authenticate."
-   - If no profile at all: ask for tenant slug and base URL (default
-     `https://admin.alvera.ai`), run configure, then ask user to login.
-4. **Tool not set up** — if the user hasn't set up their Alvera platform
+2. **Auth check** — `alvera whoami`. Three outcomes:
+   - **Valid session** → present it and proceed:
+     > "Session active: profile `default`, tenant `acme-health`,
+     > user@example.com. Proceeding."
+   - **Not authenticated / expired** → single instruction:
+     > "Please run `alvera login` and let me know when done."
+     Then stop and wait. Don't investigate WHY auth failed.
+   - **No profile configured** → ask for tenant slug and base URL
+     (default `https://admin.alvera.ai`), run `alvera configure`, then
+     ask user to login.
+3. **Tool not set up** — if the user hasn't set up their Alvera platform
    account yet, direct them to https://alvera.ai and stop.
-5. **Pick datalake** — `alvera datalakes list`. If one exists, use it
+4. **Pick datalake** — `alvera datalakes list`. If one exists, use it
    (tell the user which). If multiple, ask which. If none, offer to create.
 
 Receipt: always emit `alvera-<tenant-slug>.yaml` — don't ask.
@@ -76,22 +76,34 @@ Receipt: always emit `alvera-<tenant-slug>.yaml` — don't ask.
 **Only ask questions the CLI can't answer.** A returning user with a
 valid session and one datalake should reach Step 3 with zero prompts.
 
-If no datalake exists, offer to create one:
+**NEVER introspect the user's HOME directory.** Don't read, write, cat,
+or ls `~/.alvera-ai/` or any auth/config files. Don't symlink anything.
+Don't run `env | grep alvera`. The CLI is the only interface to auth state.
+If `alvera whoami` fails, tell the user to login — don't investigate further.
 
-**Option A (preferred): Provision Postgres via Neon** — use the Neon API
-to create a project and get connection details in a single call. See
-`references/neon-project.md` for the full API surface, response shape,
-and mapping to Alvera datalake DB role fields. Requires `NEON_API_KEY`
-env var. One API call returns host, port, database, role, and password.
+### Creating a datalake (when none exists)
 
-**Option B: Use `alvera init infra-setup`** — generates a `.env` with all
-datalake fields (name, data domain, timezone, pool size, 4 DB roles, 2
-storage variants). Fill it out, then create the datalake from those values.
+**Primary flow: `alvera init infra-setup`**
 
-After obtaining connection details, create the datalake on Alvera via
-`alvera datalakes create` per `references/resources.md` → Datalake.
+1. Run `alvera init infra-setup` in the **project directory** (cwd).
+   This generates `.alvera.datalake.env` with all required fields as blanks.
+2. Tell the user: "Fill out `.alvera.datalake.env` and let me know when done."
+   Or, if user provides values inline, fill them programmatically.
+3. Read the `.env` file from cwd to build the create body.
+4. Create via `alvera datalakes create <tenant> --body-file /tmp/datalake.json`.
+
+**Never manually construct the full datalake JSON from scratch.** Use the
+`.env` as the schema source — it guarantees all required fields are present.
+
+**Never read or write `~/.alvera-ai/.alvera.datalake.env`** — only the
+copy in the project directory (cwd). The HOME copy is the user's business.
+
+**Alternative: Neon API** — if `NEON_API_KEY` is set, use the Neon API
+to provision Postgres and get connection details in one call. See
+`references/neon-project.md`. Then fill the `.env` from Neon's response.
+
 All four Alvera roles (regulated/unregulated × reader/writer) can reuse
-the same Neon connection unless the user needs isolation.
+the same connection unless the user needs isolation.
 
 Session state to retain: `profile`, `tenantSlug`, `datalakeSlug`,
 `datalakeId`, `baseUrl`.
@@ -178,6 +190,11 @@ Don't present long menus when one path is obvious.
 - When only one option exists, use it and tell the user.
 - Anti-pattern scans and sandbox tests run automatically.
 - When the user agrees, move immediately — don't re-confirm.
+- **Create tasks lazily** — one at a time as you reach each step.
+  Don't dump 10 tasks upfront. The gap analysis IS the plan.
+- **Combine bootstrap + gap analysis into one message.** Don't pause
+  between reporting auth status and presenting the gap. One message,
+  one confirmation, then execute.
 
 **Fast-path vs confirmation-required:**
 
@@ -192,6 +209,34 @@ Don't present long menus when one path is obvious.
 | Update existing resource | Show old → new diff, require y/n |
 
 ## Hard constraints
+
+**Filesystem boundaries — whitelist approach:**
+
+You may ONLY read from these locations:
+
+| Allowed | Purpose |
+|---------|---------|
+| This skill's directory (where SKILL.md lives) | References, templates, scripts |
+| User's project directory (cwd) | CSV files, `.env` files, generated artifacts |
+| `/tmp/` | Scratch space for generated JSON bodies, profiling output |
+| Files the user explicitly provides a path to | Whatever they hand you |
+
+**If you need something not in the whitelist:**
+
+1. **Clone to /tmp** — `git clone --depth 1 <repo> /tmp/<name>` for a specific reference
+2. **Fetch npm package** — `npm pack <package>@<version> --pack-destination /tmp && tar -xzf /tmp/<pkg>.tgz -C /tmp/` to inspect published package contents
+3. **Ask the user** — "I need X, can you point me to where it lives?"
+
+**Never:**
+- Read from `~/.alvera-ai/` — use CLI commands for auth/config state
+- Browse sibling repos, parent directories, or npm cache (`~/.npm/`)
+- `find` across the filesystem looking for examples or fixtures
+- Use integration test fixtures as template source material
+
+**Templates specifically** come from:
+1. The skill's own `templates/` directory (bundled examples)
+2. Built from scratch using CSV column profiling + FHIR resource schema
+3. `alvera interop metadata <datalake> <slug>` for existing contract schemas
 
 Read on first user interaction:
 
@@ -221,6 +266,9 @@ alvera <command>                                    # if installed globally
 
 Auth is session-based, stored AWS-CLI-style under `~/.alvera-ai/`.
 User runs `alvera login` in their own shell. Skill never sees the password.
+**Never read, write, cat, ls, or symlink anything under `~/.alvera-ai/`.**
+Use `alvera whoami` for auth state. Use `alvera init infra-setup` in cwd
+for datalake config. The HOME directory is off-limits.
 
 Key commands beyond resource CRUD:
 

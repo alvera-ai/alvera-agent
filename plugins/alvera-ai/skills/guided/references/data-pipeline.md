@@ -71,8 +71,9 @@ etc.) and all values parse as int, **default to `string`** and ask.
 
 ### Path (c) — local profiling script
 
-Write `./alvera-profile.py` (stdlib only). User runs it, pastes JSON
-summary back. Output shape:
+Write `/tmp/alvera-profile.py` (stdlib only). User runs it, pastes JSON
+summary back. Delete the script after use (`rm /tmp/alvera-profile.py`).
+Output shape:
 
 ```json
 {
@@ -94,7 +95,7 @@ summary back. Output shape:
 }
 ```
 
-Script (write verbatim to `./alvera-profile.py`):
+Script (write verbatim to `/tmp/alvera-profile.py`):
 
 ```python
 #!/usr/bin/env python3
@@ -487,16 +488,32 @@ If neither exists, create them first.
 Run one sample row through the contract pipeline:
 
 ```bash
-# CSV
-head -n 2 <file> | python3 -c "
-import csv, json, sys
-r = csv.DictReader(sys.stdin)
-print(json.dumps(next(r)))
-" | alvera interop run <datalake> <contract-slug> --body-file -
+# CSV — use python for robust parsing (handles BOM, quoted fields, etc.)
+python3 -c "
+import csv, json, sys, codecs
+f = codecs.open(sys.argv[1], encoding='utf-8-sig')
+r = csv.DictReader(f)
+row = next(r)
+f.close()
+print(json.dumps(row))
+" <file> | alvera interop run <datalake> <contract-slug> --body-file -
 
 # NDJSON
-head -n 1 <file> | alvera interop run <datalake> <contract> --body-file -
+python3 -c "
+import codecs, sys
+f = codecs.open(sys.argv[1], encoding='utf-8-sig')
+for line in f:
+    line = line.strip()
+    if line:
+        print(line)
+        break
+f.close()
+" <file> | alvera interop run <datalake> <contract-slug> --body-file -
 ```
+
+If the command fails with a parse error, check for BOM headers or
+Windows line endings. The python snippets above handle UTF-8 BOM
+(`utf-8-sig`) automatically.
 
 The model sees only the pipeline output, never raw data.
 
@@ -538,3 +555,6 @@ Never log the presigned URL — print only the `key`.
 - **Content-type must match.** Presigned URL signed with it; mismatch → 403.
 - **One file per invocation.** Batch = loop.
 - **Tempfile hygiene.** `chmod 600`, `rm` on return regardless of exit code.
+- **Script cleanup.** Both `/tmp/alvera-profile.py` and `/tmp/alvera-scan.py`
+  must be deleted after use. If a script fails on edge cases (BOM, Windows
+  line endings), fix inline and re-run — don't modify this doc.

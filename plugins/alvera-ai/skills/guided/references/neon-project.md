@@ -118,23 +118,14 @@ RESP=$(curl -s 'https://console.neon.tech/api/v2/projects' \
   -H 'Content-Type: application/json' \
   -d '{"project":{"name":"my-project"}}')
 
-echo "$RESP" | jq -r '.connection_uris[0].connection_uri'
-# postgresql://neondb_owner:npg_xxx@ep-xxx.neon.tech/neondb?sslmode=require
+NEON_HOST=$(echo "$RESP" | jq -r '.connection_uris[0].connection_parameters.host')
+NEON_ROLE=$(echo "$RESP" | jq -r '.roles[0].name')
+NEON_PASS=$(echo "$RESP" | jq -r '.roles[0].password')
+NEON_DB=$(echo "$RESP" | jq -r '.databases[0].name')
+NEON_PROJECT_ID=$(echo "$RESP" | jq -r '.project.id')
 
-echo "$RESP" | jq -r '.connection_uris[0].connection_parameters.host'
-# ep-xxx.c-2.us-east-1.aws.neon.tech
-
-echo "$RESP" | jq -r '.roles[0].name'
-# neondb_owner
-
-echo "$RESP" | jq -r '.roles[0].password'
-# npg_Se0ECYqaJ5jA
-
-echo "$RESP" | jq -r '.databases[0].name'
-# neondb
-
-echo "$RESP" | jq -r '.project.id'
-# ep-cool-darkness-123456
+# Variables are now set — use them in --body-file.
+# NEVER echo $NEON_PASS to stdout.
 ```
 
 ## Mapping to Alvera datalake fields

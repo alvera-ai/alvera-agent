@@ -15,6 +15,7 @@
 | `interopContracts`      | list, get, create, update, delete, run      |
 | `dataActivationClients` | list, get, create, update, delete, run-manually, ingest, ingest-file |
 | `datasets`              | search, metadata (read-only monitoring)     |
+| `mdm`                   | verify (read-only identity resolution)      |
 | `ping`                  | health check                                |
 
 ## Out of scope (refuse)
@@ -22,7 +23,6 @@
 - Tenant create / delete (admin-only)
 - Datalake **delete** / **update** — the API doesn't expose them.
   Offer to create a new one instead.
-- MDM verify
 - Connected app **page management** — `connected-apps resolve-page` and
   `connected-apps update-message-tracking` are runtime page rendering,
   not provisioning. CRUD + `sync-routes` on connected app resources are in

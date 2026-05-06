@@ -11,17 +11,28 @@ When deriving chains, classify each action by data direction:
 - **Data IN** (ingest, record, sync, store) → **DAC**
 - **Data OUT** (send, notify, trigger, push) → **Agentic Workflow**
 
-This holds ~80% of the time. Agentic workflows only send — they don't
-store or ingest. "Record responses" is ingestion, not output.
+**Escape hatch — when the 80% rule breaks:**
+
+Ask: "Does this action *write* data somewhere, or does it *send/trigger*
+something?" If it writes → DAC regardless of how the user phrased it.
+
+Common traps:
+- "Record patient responses to SMS" → sounds like workflow, but it's
+  writing response data → **DAC**
+- "Sync reviews to a table" → writing → **DAC**
+- "Push a notification" → sending → **Workflow**
+- "Log a webhook payload" → writing → **DAC**
+
+When ambiguous, ask: "Will this create rows in a table, or trigger an
+external action (SMS, API call, email)?"
 
 ## How to read the chains
 
-Each chain lists resources in **dependency order** (leaves first). The skill
-provisions them bottom-up but the design is top-down — the user only sees
-the goal.
+Each chain lists resources in **provisioning order** (create first → last).
+The skill creates them left-to-right.
 
-`→` means "depends on". Resources to the right must exist before the
-resource to the left can be created.
+`→` means "then create". Resources to the left must exist before the
+resource to the right can be created.
 
 ---
 
@@ -32,7 +43,7 @@ resource to the left can be created.
 
 **Chain:**
 ```
-agentic workflow → SMS tool → data source → datalake
+datalake → data source → SMS tool → agentic workflow
 ```
 
 **Defaults:**
@@ -55,7 +66,7 @@ agentic workflow → SMS tool → data source → datalake
 
 **Chain:**
 ```
-DAC (ingest) → interop contract → generic table → data source → tool → datalake
+datalake → tool → data source → generic table → interop contract → DAC (ingest)
 ```
 
 **Sub-flow:** Follow `references/data-pipeline.md` for the full
@@ -74,7 +85,7 @@ sandbox test → upload flow.
 
 **Chain:**
 ```
-AI agent → tool → data source → datalake
+datalake → data source → tool → AI agent
 ```
 
 **Defaults:**
@@ -90,7 +101,7 @@ AI agent → tool → data source → datalake
 
 **Chain (depends on actions):**
 ```
-agentic workflow → [tools needed by actions] → [AI agents for enrichment] → data source → datalake
+datalake → data source → [AI agents for enrichment] → [tools needed by actions] → agentic workflow
 ```
 
 **Workflow path:** Use `references/workflows.md` — template selection
@@ -108,7 +119,7 @@ Template A or B. Otherwise, build custom via elicitation passes.
 
 **Chain:**
 ```
-connected app → datalake
+datalake → connected app
 ```
 
 **May also need:** SMS tool (if the app sends SMS via workflows),
@@ -123,7 +134,7 @@ agentic workflow (if the app is used as a connected_app target in actions).
 
 **Chain:**
 ```
-DAC → tool (with external config) → data source → datalake
+datalake → data source → tool (with external config) → DAC
 ```
 
 **May also need:** interop contract (if source schema differs from target),
@@ -153,7 +164,7 @@ to inspect data. Paginate results, summarize structure.
 
 **Chain:**
 ```
-action status updater → tool → data source → datalake
+datalake → data source → tool → action status updater
 ```
 
 ---
@@ -165,7 +176,7 @@ or any direct resource name
 
 **Chain:**
 ```
-[named resource] → [its dependencies] → datalake
+datalake → [dependencies] → [named resource]
 ```
 
 Treat as a minimal chain. Look up the resource's dependencies in
@@ -189,9 +200,8 @@ User: "I want patients to get an SMS when their appointment is confirmed,
       and if they don't confirm within 2 hours, send a reminder."
 
 Derived chain:
-  agentic workflow (two actions: confirmation + reminder)
-  → SMS tool → data source → datalake
-  → connected app (for confirmation link) → datalake
+  datalake → data source → SMS tool → connected app (for confirmation link)
+  → agentic workflow (two actions: confirmation + reminder)
 ```
 
 Present the derived plan and ask the user to confirm.

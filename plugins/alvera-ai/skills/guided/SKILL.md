@@ -47,28 +47,36 @@ chain). If the outcome is ambiguous, ask one clarifying question and proceed.
 
 ### Step 2: Bootstrap
 
-Resolve CLI prefix, authenticate, connectivity check, pick datalake.
+Auto-detect first, ask only what's missing. Returning users should not
+re-answer questions the CLI already knows.
 
-Ask in a single prompt:
-1. Profile name (default `default`)
-2. Tenant slug
-3. Base URL (default `https://admin.alvera.ai`)
+**Bootstrap sequence (run silently, no questions):**
 
-Receipt: always emit `alvera-<tenant-slug>.yaml` (e.g. `alvera-acme-health.yaml`) — don't ask.
+1. **CLI resolution** — `alvera --version` or
+   `npx -p @alvera-ai/platform-sdk alvera --version`. If both fail, hand
+   the user `npm install -g @alvera-ai/platform-sdk` and stop.
+   See `references/cli-cheatsheet.md`.
+2. **Check default profile** — `alvera whoami`. If it returns a valid
+   session (profile, tenant, email, token), present it:
+   > "Found existing session: profile `default`, tenant `acme-health`,
+   > logged in as user@example.com. Proceed with this? (y/n)"
+   If yes, skip to datalake. If no, ask which profile or tenant to use.
+3. **No session** — if `whoami` fails or shows no token:
+   - Check if `alvera configure` has been run (profile exists but no session).
+     If yes: "Please run `alvera login` to authenticate."
+   - If no profile at all: ask for tenant slug and base URL (default
+     `https://admin.alvera.ai`), run configure, then ask user to login.
+4. **Tool not set up** — if the user hasn't set up their Alvera platform
+   account yet, direct them to https://alvera.ai and stop.
+5. **Pick datalake** — `alvera datalakes list`. If one exists, use it
+   (tell the user which). If multiple, ask which. If none, offer to create.
 
-**CLI resolution** — `alvera --version` or
-`npx -p @alvera-ai/platform-sdk alvera --version`. If both fail, hand
-the user `npm install -g @alvera-ai/platform-sdk` and stop.
-See `references/cli-cheatsheet.md`.
+Receipt: always emit `alvera-<tenant-slug>.yaml` — don't ask.
 
-**Tool not set up** — if the user hasn't set up their Alvera platform
-account or tool yet, direct them to https://alvera.ai and stop.
+**Only ask questions the CLI can't answer.** A returning user with a
+valid session and one datalake should reach Step 3 with zero prompts.
 
-**Auth** — user runs `alvera login` themselves. Skill never collects
-passwords. Verify with `alvera whoami`.
-
-Verify connectivity (`alvera ping`), pick datalake
-(`alvera datalakes list`). If no datalake exists, offer to create one:
+If no datalake exists, offer to create one:
 
 **Option A (preferred): Provision Postgres via Neon** — use the Neon API
 to create a project and get connection details in a single call. See
